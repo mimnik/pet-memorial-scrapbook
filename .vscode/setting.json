@@ -1,0 +1,48 @@
+{
+  // Java配置
+  "java.home": "D:\\Program Files\\Java\\jdk-21.0.10",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "D:\\Program Files\\Java\\jdk-21.0.10"
+    }
+  ],
+  "java.jdt.ls.vmargs": "-Xmx2G -XX:+UseG1GC",
+  "maven.executable.path": "D:\\Program Files\\apache-maven-3.9.12\\bin\\mvn.cmd",
+  
+  // Vue配置
+  "vue.server.host": "localhost",
+  "vue.server.port": 5173,
+  
+  // 通用配置
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/node_modules": true,
+    "**/target": true
+  },
+  
+  // 工作区设置
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/target": true,
+    "**/dist": true
+  },
+  
+  // 终端配置
+  "terminal.integrated.cwd": "D:\\code\\PetMemorialScrapbook",
+  
+  // 文件关联
+  "files.associations": {
+    "*.vue": "vue",
+    "*.yml": "yaml"
+  }
+}

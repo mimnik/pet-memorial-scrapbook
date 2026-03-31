@@ -1,0 +1,189 @@
+## 宠物数字纪念册系统 - 项目状态总结报告（对照完成版）
+
+更新时间：2026年3月28日
+项目根目录：D:\code\PetMemorialScrapbook
+
+一、项目现状结论
+1. 已按总结报告条目完成全部功能要求（P0、P1、P2）。
+2. 后端、前端可构建、可测试、可运行。
+3. 当前推荐运行方式为 scripts 一键启动脚本（默认 H2），MySQL 作为可选模式。
+
+二、技术栈（实际）
+后端：
+1. Spring Boot 3.3.5
+2. JDK 21
+3. Maven
+4. Spring Security + JWT
+5. Spring Data JPA
+6. H2（默认）/ MySQL（mysql profile）
+
+前端：
+1. Vue 3 + TypeScript
+2. Vite 7
+3. Element Plus
+4. Pinia
+5. Vue Router
+6. Axios
+
+三、总结报告要求完成清单
+
+P0：数据库设计与实体类创建
+1. [已完成] 创建 database/init.sql
+2. [已完成] 创建 BaseEntity.java
+3. [已完成] 创建 User.java
+4. [已完成] 创建 Pet.java
+
+P0：用户认证模块
+1. [已完成] JWT 依赖
+2. [已完成] JWT 工具类
+3. [已完成] 登录/注册接口
+4. [已完成] 密码加密（BCrypt）
+
+P1：前端状态管理完善
+1. [已完成] 创建用户 store（stores/user.ts）
+2. [已完成] 路由守卫（登录校验）
+3. [已完成] Axios 拦截器注入 token 并处理 401
+
+P1：宠物基础功能
+1. [已完成] 宠物接口
+2. [已完成] 宠物列表展示
+3. [已完成] 宠物详情页面
+
+P2：后续开发条目
+1. [已完成] 纪念册功能（宠物 + 回忆）
+2. [已完成] 照片上传功能
+3. [已完成] 日记功能（回忆条目作为日记内容）
+4. [已完成] 时间线展示（el-timeline）
+
+四、关键实现位置
+后端：
+1. 认证与 JWT：backend/src/main/java/com/pet/memorial/controller/AuthController.java
+2. 安全配置与密码加密：backend/src/main/java/com/pet/memorial/config/SecurityConfig.java
+3. JWT 工具：backend/src/main/java/com/pet/memorial/security/JwtTokenProvider.java
+4. 基础实体：backend/src/main/java/com/pet/memorial/entity/BaseEntity.java
+5. 用户与宠物实体：backend/src/main/java/com/pet/memorial/entity/User.java、backend/src/main/java/com/pet/memorial/entity/Pet.java
+6. 数据脚本：database/init.sql、database/schema.sql、database/seed.sql
+
+前端：
+1. 用户状态管理：frontend/src/stores/user.ts
+2. 路由守卫：frontend/src/router/index.ts
+3. token 拦截器：frontend/src/utils/request.ts
+4. 宠物主页：frontend/src/views/HomePage.vue
+5. 宠物详情页：frontend/src/views/PetDetailPage.vue
+6. 登录页：frontend/src/views/UserLogin.vue
+
+五、构建与测试结果（本次复核）
+1. 后端测试：通过
+2. 前端 type-check：通过
+3. 前端单测：通过
+
+六、运行方式（已验证）
+1. 一键启动（默认 H2）：
+  powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
+2. 一键启动（MySQL）：
+  powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1 -UseMySQL
+3. 一键停止：
+  powershell -ExecutionPolicy Bypass -File .\scripts\stop-dev.ps1
+
+七、当前状态
+1. 总结报告中的所有要求已完成。
+2. 文档已更新为与代码一致的对照完成版。
+3. 宠物微博式社区模块已实现并通过前后端构建与测试。
+
+八、毕业设计创新模块（已实现）：宠物微社区（微博式）
+
+1. 模块定位
+  - 在现有“宠物档案 + 私人回忆”基础上，新增“公开社区层”，形成“记录 + 互动 + 沉淀”闭环。
+  - 目标是让用户不仅记录自己的宠物故事，还能在社区中获得陪伴与互助。
+
+2. 不同于市面产品的创新点（毕业设计重点）
+  - 创新点 A：双时态叙事（Daily / Memorial）
+    - Daily：日常更新，强调轻互动。
+    - Memorial：纪念叙事，强调情感表达与长期保存。
+    - 社区流按“时态”分层展示，降低信息噪音。
+  - 创新点 B：宠物第一视角开关（Pet Voice）
+    - 发帖可选“宠物口吻”，用于增强情感沉浸。
+    - 页面上显式标识“宠物视角”与“主人视角”。
+  - 创新点 C：情绪天气标签（Emotion Weather）
+    - 每条内容可选择情绪标签（晴朗/多云/小雨/雷暴等）。
+    - 标签用于社区筛选与情感检索，而非仅靠文本关键词。
+  - 创新点 D：纪念接力挑战（Memorial Relay）
+    - 针对纪念类帖子，支持“接力回应”，形成可追溯的安慰链。
+    - 用于体现社区互助价值，是论文可量化分析指标之一。
+
+3. 功能范围（首版落地）
+  - [已实现] 社区发帖：标题、正文、图片、情绪标签、叙事时态、是否宠物视角。
+  - [已实现] 社区浏览：时间流、按情绪筛选、按时态筛选。
+  - [已实现] 社区互动：点赞、评论、纪念接力标记。
+  - [已实现] 个人页能力：查看“我发布的帖子”。
+
+4. 数据模型设计（后端）
+  - CommunityPost
+    - id, authorUsername, petId, title, content, imageUrl
+    - moodTag, narrativeMode, petVoice, relayEnabled
+    - likeCount, commentCount, createdAt, updatedAt
+  - CommunityComment
+    - id, postId, authorUsername, content, relayReply, createdAt, updatedAt
+  - CommunityPostLike
+    - id, postId, username, createdAt
+    - 唯一索引（postId + username）用于防重复点赞
+  - 说明：以上数据模型已在后端实体与数据库脚本中落地。
+
+5. 接口设计（后端）
+  - [已实现] GET /api/community/feed
+  - [已实现] GET /api/community/mine
+  - [已实现] POST /api/community/posts
+  - [已实现] POST /api/community/posts/{id}/like
+  - [已实现] GET /api/community/posts/{id}/comments
+  - [已实现] POST /api/community/posts/{id}/comments
+
+6. 前端页面设计
+  - [已实现] 新增 CommunityPage
+    - 顶部筛选（叙事时态 + 情绪天气）
+    - 发帖卡片（支持图片链接和视角选择）
+    - 流式帖子列表（点赞/评论/接力）
+  - [已实现] 首页增加“进入社区”入口
+  - [已实现] 路由新增 /community（需登录）
+
+7. 可验证的论文指标
+  - 指标 1：社区互动率（点赞+评论/帖子）
+  - 指标 2：纪念接力参与率（relay 评论占比）
+  - 指标 3：情绪标签分布与内容时态相关性
+
+8. 关键落地文件
+  - backend/src/main/java/com/pet/memorial/entity/CommunityPost.java
+  - backend/src/main/java/com/pet/memorial/entity/CommunityComment.java
+  - backend/src/main/java/com/pet/memorial/entity/CommunityPostLike.java
+  - backend/src/main/java/com/pet/memorial/service/CommunityService.java
+  - backend/src/main/java/com/pet/memorial/controller/CommunityController.java
+  - frontend/src/views/CommunityPage.vue
+  - frontend/src/api/community.ts
+  - frontend/src/types/community.ts
+  - frontend/src/router/index.ts
+  - database/schema.sql、database/init.sql、database/seed.sql
+
+9. 复核结果（本次重构后）
+  - 后端测试：通过
+  - 前端 type-check：通过
+  - 前端单测：通过
+
+十、本轮新增需求闭环（2026-03-28）
+1. [已完成] 登录页失败提示可区分“账户不存在 / 密码错误”。
+2. [已完成] 我的宠物、宠物回忆、宠物社区上传图片后均为图片直显。
+3. [已完成] 宠物回忆与社区支持视频上传，单文件最大 1024MB。
+4. [已完成] 社区与回忆视频支持封面与时长信息展示。
+5. [已完成] 公开链接已优化为用户后缀主页模式（/home/:ownerUsername?pet=...）。
+6. [已完成] 社区已实现搜索栏、推荐栏（自定义推荐算法）、宠物热榜。
+7. [已完成] 社区动态发布采用按键弹窗交互。
+8. [已完成] 前端框架样式与交互已完成优化，并同步更新项目文档。
+9. [已完成] 宠物性别字段改为选项输入并完成前后端联动。
+
+十一、后续计划（本轮已完成）
+1.[已完成] 新增回忆时自动填写当天日期，用户仍可手动修改。
+2.[已完成] 社区增加“关注”功能，用户可关注/取消关注他人，并可在首页查看关注动态。
+3.[已完成] 社区增加“私信”功能，用户可发送私信并查看会话记录。
+4.[已完成] 社区增加“举报”功能，用户可提交举报，管理员可查看并处理举报列表。
+5.[已完成] 社区增加“话题”功能，用户可创建话题并在发帖时选择话题。
+6.[已完成] 首页展示登录账户用户名，并新增个人信息查询与完善能力（昵称/头像/简介）。
+
+

@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: pet-memorial-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:h2:file:./data/pet_memorial_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: ${JPA_DIALECT:org.hibernate.dialect.H2Dialect}
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  servlet:
+    multipart:
+      max-file-size: 1024MB
+      max-request-size: 1024MB
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.pet.memorial: DEBUG
+    org.springframework.security: INFO
+
+jwt:
+  secret: ${JWT_SECRET:changeMeToAtLeast32CharsSecretKey}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+app:
+  upload-dir: ${UPLOAD_DIR:uploads}

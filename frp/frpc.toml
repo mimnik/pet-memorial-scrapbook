@@ -1,0 +1,15 @@
+serverAddr = "47.119.131.127"
+serverPort = 7000
+
+[[proxies]]
+name = "pet-memorial-frontend"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 3000
+remotePort = 25565
+
+#web页面,可选
+#webServer.addr = "127.0.0.1"
+#webServer.port = 7500
+#webServer.user = "admin"
+#webServer.password = "admin"
