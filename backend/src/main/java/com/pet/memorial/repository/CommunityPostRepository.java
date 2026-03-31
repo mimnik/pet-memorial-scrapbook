@@ -35,4 +35,6 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
     List<CommunityPost> findByAuthorUsernameInOrderByCreatedAtDescIdDesc(List<String> authorUsernames);
 
     List<CommunityPost> findAllByOrderByCreatedAtDescIdDesc();
+
+    int countByAuthorUsername(String authorUsername);
 }

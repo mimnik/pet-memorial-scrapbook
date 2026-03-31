@@ -15,4 +15,6 @@ public interface PetRepository extends JpaRepository<Pet, Long> {
 	Optional<Pet> findByShareTokenAndIsPublicTrue(String shareToken);
 
 	List<Pet> findByOwnerUsernameAndIsPublicTrueOrderByCreatedAtDesc(String ownerUsername);
+
+	int countByOwnerUsernameAndIsPublicTrue(String ownerUsername);
 }

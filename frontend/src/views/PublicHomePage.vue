@@ -3,7 +3,7 @@
     <header class="home-header">
       <div>
         <h1>@{{ homeData?.ownerUsername || ownerUsername }} 的宠物纪念主页</h1>
-        <p>可切换查看该用户公开的宠物与回忆故事。</p>
+        <p>可切换查看该用户公开的宠物、回忆和社区动态。</p>
       </div>
       <router-link to="/login" class="back-link">返回登录</router-link>
     </header>
@@ -85,6 +85,56 @@
           </el-timeline-item>
         </el-timeline>
       </el-card>
+
+      <el-card class="timeline-card" shadow="hover">
+        <template #header>
+          <div class="timeline-title">公开动态</div>
+        </template>
+
+        <el-empty v-if="homeData.communityPosts.length === 0" description="该用户暂未发布社区动态" />
+
+        <div v-else class="public-post-list">
+          <div v-for="post in homeData.communityPosts" :key="post.id" class="public-post-item">
+            <div class="public-post-head">
+              <strong>{{ post.title }}</strong>
+              <span>{{ formatPostTime(post.createdAt) }}</span>
+            </div>
+
+            <p class="public-post-meta">
+              <span>{{ formatMode(post.narrativeMode) }}</span>
+              <span> · {{ formatMood(post.moodTag) }}</span>
+              <span v-if="post.topicName"> · #{{ post.topicName }}</span>
+              <span> · {{ post.petName }}</span>
+            </p>
+
+            <p class="public-post-content">{{ post.content }}</p>
+
+            <el-image
+              v-if="post.imageUrl"
+              :src="post.imageUrl"
+              :preview-src-list="[post.imageUrl]"
+              preview-teleported
+              fit="cover"
+              class="memory-image"
+            />
+
+            <div v-if="post.videoUrl" class="memory-video-wrap">
+              <video
+                class="memory-video"
+                controls
+                preload="metadata"
+                :poster="post.videoCoverUrl || undefined"
+                :src="post.videoUrl"
+              />
+              <span v-if="post.videoDurationSeconds" class="video-duration-chip">
+                {{ formatDuration(post.videoDurationSeconds) }}
+              </span>
+            </div>
+
+            <div class="public-post-stats">点赞 {{ post.likeCount }} · 评论 {{ post.commentCount }}</div>
+          </div>
+        </div>
+      </el-card>
     </template>
   </div>
 </template>
@@ -108,6 +158,19 @@ const activePetToken = computed(() => {
   return typeof pet === 'string' ? pet : ''
 })
 
+const moodText: Record<string, string> = {
+  SUNNY: '晴朗',
+  CLOUDY: '多云',
+  RAINY: '小雨',
+  STORMY: '雷暴',
+  RAINBOW: '彩虹',
+}
+
+const modeText: Record<string, string> = {
+  DAILY: '日常',
+  MEMORIAL: '纪念',
+}
+
 const formatDuration = (seconds: number) => {
   const safe = Math.max(0, Math.floor(seconds))
   const hour = Math.floor(safe / 3600)
@@ -117,6 +180,20 @@ const formatDuration = (seconds: number) => {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
   }
   return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
+}
+
+const formatMood = (mood: string) => moodText[mood] || mood
+const formatMode = (mode: string) => modeText[mode] || mode
+
+const formatPostTime = (value: string) => {
+  if (!value) {
+    return '-'
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 const loadUserHome = async () => {
@@ -264,6 +341,11 @@ onMounted(async () => {
   width: min(360px, 100%);
   border-radius: 10px;
   border: 1px solid #eef1f8;
+  cursor: zoom-in;
+}
+
+.memory-image :deep(img) {
+  border-radius: 10px;
 }
 
 .memory-video-wrap {
@@ -287,6 +369,48 @@ onMounted(async () => {
   border-radius: 999px;
   color: #fff;
   background: rgba(0, 0, 0, 0.66);
+  font-size: 12px;
+}
+
+.public-post-list {
+  display: grid;
+  gap: 12px;
+}
+
+.public-post-item {
+  border: 1px solid #e8edf8;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.public-post-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.public-post-head span {
+  color: #6e7787;
+  font-size: 12px;
+}
+
+.public-post-meta {
+  margin-top: 8px;
+  color: #6e7787;
+  font-size: 12px;
+}
+
+.public-post-content {
+  margin-top: 8px;
+  color: #3d4553;
+  white-space: pre-wrap;
+}
+
+.public-post-stats {
+  margin-top: 8px;
+  color: #6e7787;
   font-size: 12px;
 }
 

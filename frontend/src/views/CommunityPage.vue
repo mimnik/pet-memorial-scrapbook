@@ -74,7 +74,14 @@
 
             <p class="feed-content">{{ post.content }}</p>
 
-            <img v-if="post.imageUrl" :src="post.imageUrl" alt="post-image" class="feed-image" />
+            <el-image
+              v-if="post.imageUrl"
+              :src="post.imageUrl"
+              :preview-src-list="[post.imageUrl]"
+              preview-teleported
+              fit="cover"
+              class="feed-image"
+            />
 
             <div v-if="post.videoUrl" class="feed-video-wrap">
               <video
@@ -105,6 +112,7 @@
               <el-button v-if="post.authorUsername !== currentUsername" link @click="openMessageDialog(post.authorUsername)">
                 私信
               </el-button>
+              <el-button link type="primary" @click="goUserHome(post.authorUsername)">查看主页</el-button>
               <el-button link type="danger" @click="openReportDialog(post)">举报</el-button>
             </div>
           </el-card>
@@ -112,6 +120,41 @@
       </el-col>
 
       <el-col :xs="24" :lg="8">
+        <el-card class="side-card" shadow="hover">
+          <template #header>
+            <span>搜索用户主页</span>
+          </template>
+          <div class="user-search-row">
+            <el-input
+              v-model="userSearchKeyword"
+              clearable
+              placeholder="输入用户名或昵称"
+              @keyup.enter="onSearchPublicUsers"
+            />
+            <el-button type="primary" :loading="userSearchLoading" @click="onSearchPublicUsers">搜索</el-button>
+          </div>
+
+          <el-empty
+            v-if="!userSearchLoading && userSearchKeyword.trim() && userSearchResults.length === 0"
+            description="未找到可公开访问的用户"
+          />
+
+          <div v-if="userSearchResults.length > 0" class="user-search-list" v-loading="userSearchLoading">
+            <button
+              v-for="user in userSearchResults"
+              :key="user.username"
+              class="user-search-item"
+              @click="goUserHome(user.username)"
+            >
+              <img :src="user.avatarUrl || defaultAvatarUrl" alt="user-avatar" class="user-search-avatar" />
+              <div>
+                <strong>{{ user.displayName || `@${user.username}` }}</strong>
+                <p>@{{ user.username }} · 公开宠物 {{ user.publicPetCount }} · 动态 {{ user.recentPostCount }}</p>
+              </div>
+            </button>
+          </div>
+        </el-card>
+
         <el-card class="side-card" shadow="hover">
           <template #header>
             <span>推荐内容</span>
@@ -137,7 +180,12 @@
           </template>
           <el-empty v-if="hotPets.length === 0" description="暂无热榜数据" />
           <ol v-else class="hot-rank-list">
-            <li v-for="(item, index) in hotPets" :key="item.petId" class="hot-rank-item">
+            <li
+              v-for="(item, index) in hotPets"
+              :key="item.petId"
+              class="hot-rank-item"
+              @click="goHotPetHome(item)"
+            >
               <div class="hot-left">
                 <span class="hot-index">{{ index + 1 }}</span>
                 <img v-if="item.petAvatarUrl" :src="item.petAvatarUrl" alt="pet-avatar" class="hot-avatar" />
@@ -149,6 +197,7 @@
               <div class="hot-right">
                 <span>{{ item.heatScore.toFixed(1) }}</span>
                 <small>{{ item.postCount }} 帖</small>
+                <el-button link type="primary" @click.stop="goHotPetHome(item)">查看主页</el-button>
               </div>
             </li>
           </ol>
@@ -431,6 +480,7 @@ import {
   toggleCommunityLike,
 } from '@/api/community'
 import { followUser, unfollowUser } from '@/api/social'
+import { searchPublicUsers } from '@/api/public'
 import { createReport, handleReport, listAdminReports, listMyReports } from '@/api/report'
 import { listMessageConversations, listMessagesWithUser, sendMessageToUser } from '@/api/message'
 import { listPets } from '@/api/pet'
@@ -448,6 +498,7 @@ import type {
 import type { MessageConversation, MessageItem } from '@/types/message'
 import type { ReportItem, ReportStatus } from '@/types/report'
 import type { Pet } from '@/types/pet'
+import type { PublicUserSearchItem } from '@/types/public'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -458,6 +509,11 @@ const recommendPosts = ref<CommunityPost[]>([])
 const hotPets = ref<PetHotRank[]>([])
 const comments = ref<CommunityComment[]>([])
 const topics = ref<CommunityTopic[]>([])
+const defaultAvatarUrl = '/default-avatar.jpg'
+
+const userSearchKeyword = ref('')
+const userSearchLoading = ref(false)
+const userSearchResults = ref<PublicUserSearchItem[]>([])
 
 const activeMode = ref<CommunityNarrativeMode | ''>('')
 const activeMood = ref<CommunityMoodTag | ''>('')
@@ -610,6 +666,38 @@ const captureVideoCover = (file: File): Promise<Blob | null> =>
 
 const goHome = async () => {
   await router.push('/')
+}
+
+const goUserHome = async (username: string, petShareToken?: string) => {
+  const target = username.trim()
+  if (!target) {
+    return
+  }
+
+  await router.push({
+    path: `/home/${encodeURIComponent(target)}`,
+    query: petShareToken ? { pet: petShareToken } : undefined,
+  })
+}
+
+const onSearchPublicUsers = async () => {
+  const keyword = userSearchKeyword.value.trim()
+  if (!keyword) {
+    userSearchResults.value = []
+    return
+  }
+
+  userSearchLoading.value = true
+  try {
+    const res = await searchPublicUsers(keyword, 12)
+    userSearchResults.value = res.data
+  } finally {
+    userSearchLoading.value = false
+  }
+}
+
+const goHotPetHome = async (item: PetHotRank) => {
+  await goUserHome(item.ownerUsername, item.petShareToken)
 }
 
 const resetPostForm = () => {
@@ -1132,6 +1220,11 @@ onMounted(async () => {
   width: min(420px, 100%);
   border-radius: 10px;
   border: 1px solid #edf1f8;
+  cursor: zoom-in;
+}
+
+.feed-image :deep(img) {
+  border-radius: 10px;
 }
 
 .feed-video-wrap {
@@ -1194,6 +1287,51 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 
+.user-search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.user-search-row :deep(.el-input) {
+  flex: 1;
+}
+
+.user-search-list {
+  display: grid;
+  gap: 8px;
+}
+
+.user-search-item {
+  border: 1px solid #edf1f8;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-search-item strong {
+  color: #2f3543;
+}
+
+.user-search-item p {
+  margin-top: 6px;
+  color: #6d7587;
+  font-size: 12px;
+}
+
+.user-search-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e4e9f5;
+}
+
 .recommend-list {
   display: grid;
   gap: 8px;
@@ -1238,6 +1376,7 @@ onMounted(async () => {
   border: 1px solid #edf1f8;
   border-radius: 10px;
   padding: 8px;
+  cursor: pointer;
 }
 
 .hot-left {
@@ -1441,7 +1580,8 @@ onMounted(async () => {
   }
 
   .topic-select-row,
-  .chat-send-row {
+  .chat-send-row,
+  .user-search-row {
     flex-direction: column;
   }
 

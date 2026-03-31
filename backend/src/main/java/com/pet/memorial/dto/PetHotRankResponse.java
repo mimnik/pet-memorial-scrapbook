@@ -3,6 +3,7 @@ package com.pet.memorial.dto;
 public class PetHotRankResponse {
 
     private Long petId;
+    private String petShareToken;
     private String petName;
     private String petAvatarUrl;
     private String ownerUsername;
@@ -17,6 +18,14 @@ public class PetHotRankResponse {
 
     public void setPetId(Long petId) {
         this.petId = petId;
+    }
+
+    public String getPetShareToken() {
+        return petShareToken;
+    }
+
+    public void setPetShareToken(String petShareToken) {
+        this.petShareToken = petShareToken;
     }
 
     public String getPetName() {

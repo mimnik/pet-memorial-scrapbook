@@ -11,15 +11,27 @@ public class UserPublicHomeResponse {
     private List<Pet> publicPets;
     private Pet activePet;
     private List<MemoryEntry> memories;
+    private List<PublicCommunityPostResponse> communityPosts;
 
     public UserPublicHomeResponse() {
     }
 
     public UserPublicHomeResponse(String ownerUsername, List<Pet> publicPets, Pet activePet, List<MemoryEntry> memories) {
+        this(ownerUsername, publicPets, activePet, memories, List.of());
+    }
+
+    public UserPublicHomeResponse(
+        String ownerUsername,
+        List<Pet> publicPets,
+        Pet activePet,
+        List<MemoryEntry> memories,
+        List<PublicCommunityPostResponse> communityPosts
+    ) {
         this.ownerUsername = ownerUsername;
         this.publicPets = publicPets;
         this.activePet = activePet;
         this.memories = memories;
+        this.communityPosts = communityPosts;
     }
 
     public String getOwnerUsername() {
@@ -52,5 +64,13 @@ public class UserPublicHomeResponse {
 
     public void setMemories(List<MemoryEntry> memories) {
         this.memories = memories;
+    }
+
+    public List<PublicCommunityPostResponse> getCommunityPosts() {
+        return communityPosts;
+    }
+
+    public void setCommunityPosts(List<PublicCommunityPostResponse> communityPosts) {
+        this.communityPosts = communityPosts;
     }
 }

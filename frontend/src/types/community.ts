@@ -65,6 +65,7 @@ export interface CommunityTopicPayload {
 
 export interface PetHotRank {
   petId: number
+  petShareToken?: string
   petName: string
   petAvatarUrl?: string
   ownerUsername: string

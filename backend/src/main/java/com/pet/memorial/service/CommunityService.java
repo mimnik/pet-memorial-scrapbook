@@ -118,6 +118,7 @@ public class CommunityService implements CommunityOperations {
             PetHotRankResponse row = rankings.computeIfAbsent(pet.getId(), key -> {
                 PetHotRankResponse init = new PetHotRankResponse();
                 init.setPetId(pet.getId());
+                init.setPetShareToken(pet.getShareToken());
                 init.setPetName(pet.getName());
                 init.setPetAvatarUrl(pet.getAvatarUrl());
                 init.setOwnerUsername(pet.getOwnerUsername());

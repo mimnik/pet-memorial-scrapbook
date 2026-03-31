@@ -2,7 +2,8 @@
   <div class="home-page">
     <header class="hero">
       <div class="hero-title-row">
-        <div>
+        <div class="hero-copy">
+          <p class="hero-eyebrow">PET MEMORIAL SCRAPBOOK</p>
           <h1>宠物数字纪念册</h1>
           <p>记录每一段与宠物同行的回忆，沉淀成为可长期保存的数字纪念页。</p>
           <p class="login-user">
@@ -11,10 +12,40 @@
           </p>
         </div>
         <div class="hero-actions">
-          <el-button @click="openProfileDialog">个人资料</el-button>
           <el-button type="primary" plain @click="goCommunity">进入宠物社区</el-button>
-          <el-button :disabled="!selectedPet" @click="copyShareLink">复制公开链接</el-button>
+          <el-button @click="openFollowingDialog">关注动态</el-button>
+          <el-button @click="copyShareLink">分享主页</el-button>
           <el-button type="danger" plain @click="logout">退出登录</el-button>
+
+          <el-popover placement="bottom-end" trigger="hover" :width="320">
+            <template #reference>
+              <button class="avatar-trigger" type="button">
+                <img :src="currentAvatarUrl" alt="user-avatar" class="user-avatar" />
+                <span>{{ userDisplayName || `@${userStore.profile?.username || ''}` }}</span>
+              </button>
+            </template>
+
+            <div class="user-center-panel">
+              <div class="user-center-head">
+                <img :src="currentAvatarUrl" alt="user-avatar" class="user-center-avatar" />
+                <div>
+                  <strong>{{ userDisplayName || userStore.profile?.username }}</strong>
+                  <p>@{{ userStore.profile?.username }}</p>
+                </div>
+              </div>
+
+              <p v-if="profile?.bio" class="user-center-bio">{{ profile?.bio }}</p>
+              <div class="user-center-stats">
+                <span>关注 {{ profile?.followingCount || 0 }}</span>
+                <span>粉丝 {{ profile?.followerCount || 0 }}</span>
+              </div>
+
+              <div class="user-center-actions">
+                <el-button type="primary" size="small" @click="openProfileDialog">用户中心</el-button>
+                <el-button size="small" @click="openFollowingDialog">关注动态</el-button>
+              </div>
+            </div>
+          </el-popover>
         </div>
       </div>
     </header>
@@ -57,33 +88,6 @@
       </el-col>
 
       <el-col :xs="24" :lg="14">
-        <el-card class="panel" shadow="hover">
-          <template #header>
-            <div class="panel-header">
-              <span>关注动态</span>
-              <el-button type="primary" link @click="loadFollowingFeed">刷新</el-button>
-            </div>
-          </template>
-
-          <el-empty v-if="followingPosts.length === 0" description="还没有关注动态，去社区关注一些用户吧" />
-
-          <div v-else class="following-feed-list">
-            <div v-for="post in followingPosts" :key="post.id" class="following-feed-item">
-              <div>
-                <strong>{{ post.title }}</strong>
-                <p>
-                  @{{ post.authorUsername }}
-                  <span v-if="post.topicName"> · #{{ post.topicName }}</span>
-                </p>
-              </div>
-              <div class="following-feed-actions">
-                <span>{{ formatPostTime(post.createdAt) }}</span>
-                <el-button link type="primary" @click="goCommunity">去查看</el-button>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
         <el-card class="panel" shadow="hover">
           <template #header>
             <div class="panel-header">
@@ -140,6 +144,31 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <el-dialog v-model="followingDialogVisible" title="关注动态" width="760px">
+      <div class="following-dialog-header">
+        <span>你关注的用户最近发布内容</span>
+        <el-button type="primary" link @click="loadFollowingFeed">刷新</el-button>
+      </div>
+
+      <el-empty v-if="followingPosts.length === 0" description="还没有关注动态，去社区关注一些用户吧" />
+
+      <div v-else class="following-feed-list">
+        <div v-for="post in followingPosts" :key="post.id" class="following-feed-item">
+          <div>
+            <strong>{{ post.title }}</strong>
+            <p>
+              @{{ post.authorUsername }}
+              <span v-if="post.topicName"> · #{{ post.topicName }}</span>
+            </p>
+          </div>
+          <div class="following-feed-actions">
+            <span>{{ formatPostTime(post.createdAt) }}</span>
+            <el-button link type="primary" @click="goCommunity">去查看</el-button>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
 
     <el-dialog v-model="petDialogVisible" :title="petDialogTitle" width="520px">
       <el-form :model="petForm" label-width="88px">
@@ -290,10 +319,12 @@ const memories = ref<MemoryEntry[]>([])
 const followingPosts = ref<CommunityPost[]>([])
 const selectedPetId = ref<number | null>(null)
 const submitting = ref(false)
+const defaultAvatarUrl = '/default-avatar.jpg'
 
 const petDialogVisible = ref(false)
 const memoryDialogVisible = ref(false)
 const profileDialogVisible = ref(false)
+const followingDialogVisible = ref(false)
 const editingPetId = ref<number | null>(null)
 const editingMemoryId = ref<number | null>(null)
 const profileLoading = ref(false)
@@ -333,6 +364,7 @@ const selectedPet = computed(() => pets.value.find((pet) => pet.id === selectedP
 const petDialogTitle = computed(() => (editingPetId.value ? '编辑宠物' : '新增宠物'))
 const memoryDialogTitle = computed(() => (editingMemoryId.value ? '编辑回忆' : '新增回忆'))
 const userDisplayName = computed(() => profile.value?.displayName || userStore.profile?.displayName || '')
+const currentAvatarUrl = computed(() => profile.value?.avatarUrl || userStore.profile?.avatarUrl || defaultAvatarUrl)
 const petGenderOptions = [
   { label: '公', value: '公' },
   { label: '母', value: '母' },
@@ -449,6 +481,11 @@ const loadMemories = async () => {
 const loadFollowingFeed = async () => {
   const res = await listFollowingCommunityFeed()
   followingPosts.value = res.data
+}
+
+const openFollowingDialog = async () => {
+  followingDialogVisible.value = true
+  await loadFollowingFeed()
 }
 
 const loadProfile = async () => {
@@ -696,23 +733,15 @@ const onDeleteMemory = async (id: number) => {
 }
 
 const copyShareLink = async () => {
-  if (!selectedPet.value) {
-    ElMessage.warning('请先选择宠物')
-    return
-  }
-  if (!selectedPet.value.isPublic) {
-    ElMessage.warning('该宠物未开启公开分享，请先在编辑中打开公开开关')
-    return
-  }
   const ownerUsername = userStore.profile?.username || ''
   if (!ownerUsername) {
     ElMessage.warning('未获取到当前用户名，请重新登录后再试')
     return
   }
 
-  const link = `${window.location.origin}/home/${encodeURIComponent(ownerUsername)}?pet=${selectedPet.value.shareToken}`
+  const link = `${window.location.origin}/home/${encodeURIComponent(ownerUsername)}`
   await navigator.clipboard.writeText(link)
-  ElMessage.success('公开主页链接已复制')
+  ElMessage.success('主页链接已复制')
 }
 
 const logout = async () => {
@@ -733,44 +762,130 @@ onMounted(async () => {
 .home-page {
   min-height: 100vh;
   padding: 20px;
-  background: linear-gradient(180deg, #fff7ee 0%, #f6fbff 45%, #ffffff 100%);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 227, 198, 0.58) 0%, rgba(255, 227, 198, 0) 34%),
+    radial-gradient(circle at 100% 10%, rgba(184, 223, 255, 0.42) 0%, rgba(184, 223, 255, 0) 32%),
+    linear-gradient(180deg, #fff9f2 0%, #f5fafe 48%, #ffffff 100%);
 }
 
 .hero {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid #e5ecf8;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 32px rgba(43, 66, 106, 0.08);
 }
 
 .hero-title-row {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   align-items: flex-start;
+}
+
+.hero-copy {
+  max-width: 620px;
+}
+
+.hero-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: #6b7b94;
+  margin-bottom: 8px;
 }
 
 .hero-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .hero h1 {
   margin-bottom: 8px;
-  font-size: 32px;
-  color: #2b2f38;
+  font-size: 34px;
+  color: #243049;
+  line-height: 1.2;
 }
 
 .hero p {
-  color: #6d7485;
+  color: #60708a;
 }
 
 .login-user {
-  margin-top: 6px;
+  margin-top: 10px;
   font-size: 14px;
+}
+
+.avatar-trigger {
+  border: 1px solid #e2e8f6;
+  background: #fff;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  cursor: pointer;
+  color: #2f3950;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #dce5f5;
+}
+
+.user-center-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.user-center-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-center-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #dce5f5;
+}
+
+.user-center-head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #6d7587;
+}
+
+.user-center-bio {
+  color: #55617a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.user-center-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #5d6a82;
+}
+
+.user-center-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .panel {
   margin-bottom: 20px;
   border-radius: 14px;
+  border: 1px solid #e9eef8;
 }
 
 .panel-header {
@@ -846,13 +961,22 @@ onMounted(async () => {
   gap: 10px;
 }
 
+.following-dialog-header {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #62718a;
+}
+
 .following-feed-item {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  border: 1px solid #ecf0f8;
+  border: 1px solid #e6edf9;
   border-radius: 10px;
-  padding: 10px;
+  padding: 12px;
+  background: #fff;
 }
 
 .following-feed-item p {
@@ -944,6 +1068,14 @@ onMounted(async () => {
 
   .hero-title-row {
     flex-direction: column;
+  }
+
+  .hero-actions {
+    justify-content: flex-start;
+  }
+
+  .user-center-actions {
+    flex-wrap: wrap;
   }
 }
 </style>
