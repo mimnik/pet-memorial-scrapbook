@@ -16,6 +16,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByUsernameIn(List<String> usernames);
 
+    List<User> findAllByOrderByCreatedAtDesc();
+
         @Query("""
                 select u from User u
                 where exists (
@@ -31,6 +33,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 order by u.username asc
                 """)
         List<User> searchPublicUsersWithPublicPets(@Param("keyword") String keyword);
+
+        long countByAccountFrozenTrue();
+
+        long countByPostingRestrictedTrue();
 
     boolean existsByUsername(String username);
 

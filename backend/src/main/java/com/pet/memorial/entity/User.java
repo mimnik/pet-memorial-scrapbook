@@ -41,6 +41,18 @@ public class User {
     private String role = "ROLE_USER";
 
     @Column(nullable = false)
+    private Boolean accountFrozen = Boolean.FALSE;
+
+    @Column(nullable = false)
+    private Boolean postingRestricted = Boolean.FALSE;
+
+    @Column(nullable = false)
+    private Integer warningCount = 0;
+
+    @Column(length = 1000)
+    private String adminNote;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
@@ -120,6 +132,38 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public Boolean getAccountFrozen() {
+        return accountFrozen;
+    }
+
+    public void setAccountFrozen(Boolean accountFrozen) {
+        this.accountFrozen = accountFrozen;
+    }
+
+    public Boolean getPostingRestricted() {
+        return postingRestricted;
+    }
+
+    public void setPostingRestricted(Boolean postingRestricted) {
+        this.postingRestricted = postingRestricted;
+    }
+
+    public Integer getWarningCount() {
+        return warningCount;
+    }
+
+    public void setWarningCount(Integer warningCount) {
+        this.warningCount = warningCount;
+    }
+
+    public String getAdminNote() {
+        return adminNote;
+    }
+
+    public void setAdminNote(String adminNote) {
+        this.adminNote = adminNote;
     }
 
     public LocalDateTime getCreatedAt() {

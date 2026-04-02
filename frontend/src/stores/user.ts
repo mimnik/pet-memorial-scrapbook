@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login as loginApi, me, register as registerApi } from '@/api/auth'
+import { guestLogin as guestLoginApi, login as loginApi, me, register as registerApi } from '@/api/auth'
 import type { AuthPayload, LoginRequest, RegisterRequest } from '@/types/auth'
 import { clearAuth, getCurrentUser, getToken, setCurrentUser, setToken } from '@/utils/auth'
 
@@ -32,6 +32,11 @@ export const useUserStore = defineStore('user', {
     },
     async login(payload: LoginRequest) {
       const res = await loginApi(payload)
+      this.applySession(res.data)
+      return res
+    },
+    async guestLogin() {
+      const res = await guestLoginApi()
       this.applySession(res.data)
       return res
     },

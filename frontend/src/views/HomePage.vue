@@ -12,12 +12,13 @@
           </p>
         </div>
         <div class="hero-actions">
-          <el-button type="primary" plain @click="goCommunity">进入宠物社区</el-button>
-          <el-button @click="openFollowingDialog">关注动态</el-button>
-          <el-button @click="copyShareLink">分享主页</el-button>
+          <el-button v-if="!isAdmin" type="primary" plain @click="goCommunity">进入宠物社区</el-button>
+          <el-button v-if="isAdmin" type="warning" plain @click="goAdminCenter">管理员中心</el-button>
+          <el-button v-if="!isAdmin" @click="openFollowingDialog">关注动态</el-button>
+          <el-button v-if="!isAdmin" @click="copyShareLink">分享主页</el-button>
           <el-button type="danger" plain @click="logout">退出登录</el-button>
 
-          <el-popover placement="bottom-end" trigger="hover" :width="320">
+          <el-popover v-if="!isAdmin" placement="bottom-end" trigger="hover" :width="320">
             <template #reference>
               <button class="avatar-trigger" type="button">
                 <img :src="currentAvatarUrl" alt="user-avatar" class="user-avatar" />
@@ -50,7 +51,17 @@
       </div>
     </header>
 
-    <el-row :gutter="20">
+    <el-card v-if="isAdmin" class="panel" shadow="hover">
+      <template #header>
+        <div class="panel-header">
+          <span>管理员账号</span>
+          <el-button type="warning" @click="goAdminCenter">进入管理中心</el-button>
+        </div>
+      </template>
+      <p>管理员账号仅保留管理中心功能，普通宠物记录与分享功能已隐藏。</p>
+    </el-card>
+
+    <el-row v-if="!isAdmin" :gutter="20">
       <el-col :xs="24" :lg="10">
         <el-card class="panel" shadow="hover">
           <template #header>
@@ -363,6 +374,7 @@ const profileForm = ref({
 const selectedPet = computed(() => pets.value.find((pet) => pet.id === selectedPetId.value))
 const petDialogTitle = computed(() => (editingPetId.value ? '编辑宠物' : '新增宠物'))
 const memoryDialogTitle = computed(() => (editingMemoryId.value ? '编辑回忆' : '新增回忆'))
+const isAdmin = computed(() => userStore.profile?.role === 'ROLE_ADMIN')
 const userDisplayName = computed(() => profile.value?.displayName || userStore.profile?.displayName || '')
 const currentAvatarUrl = computed(() => profile.value?.avatarUrl || userStore.profile?.avatarUrl || defaultAvatarUrl)
 const petGenderOptions = [
@@ -733,15 +745,66 @@ const onDeleteMemory = async (id: number) => {
 }
 
 const copyShareLink = async () => {
+  if (isAdmin.value) {
+    ElMessage.info('管理员账号仅保留管理中心功能')
+    return
+  }
+
   const ownerUsername = userStore.profile?.username || ''
   if (!ownerUsername) {
     ElMessage.warning('未获取到当前用户名，请重新登录后再试')
     return
   }
 
-  const link = `${window.location.origin}/home/${encodeURIComponent(ownerUsername)}`
-  await navigator.clipboard.writeText(link)
-  ElMessage.success('主页链接已复制')
+  let targetPet = pets.value.find((pet) => pet.isPublic)
+  if (!targetPet) {
+    const candidate = selectedPet.value || pets.value[0]
+    if (!candidate) {
+      ElMessage.warning('请先创建一个宠物后再分享主页')
+      return
+    }
+
+    const shouldOpenPublic = await ElMessageBox.confirm(
+      `你当前没有公开宠物，是否将“${candidate.name}”设为公开并继续分享？`,
+      '开启主页分享',
+      {
+        type: 'warning',
+        confirmButtonText: '设为公开并继续',
+        cancelButtonText: '取消',
+      },
+    )
+      .then(() => true)
+      .catch(() => false)
+
+    if (!shouldOpenPublic) {
+      return
+    }
+
+    const res = await updatePet(candidate.id, {
+      name: candidate.name,
+      species: candidate.species || '',
+      breed: candidate.breed || '',
+      gender: candidate.gender || '',
+      birthDate: candidate.birthDate || '',
+      memorialDate: candidate.memorialDate || '',
+      avatarUrl: candidate.avatarUrl || '',
+      description: candidate.description || '',
+      isPublic: true,
+    })
+    targetPet = res.data
+    await loadPets()
+  }
+
+  const query = targetPet?.shareToken ? `?pet=${encodeURIComponent(targetPet.shareToken)}` : ''
+  const link = `${window.location.origin}/home/${encodeURIComponent(ownerUsername)}${query}`
+
+  try {
+    await navigator.clipboard.writeText(link)
+    ElMessage.success('主页链接已复制')
+  } catch {
+    window.prompt('自动复制失败，请手动复制下面链接：', link)
+    ElMessage.success('已生成主页链接')
+  }
 }
 
 const logout = async () => {
@@ -753,7 +816,16 @@ const goCommunity = async () => {
   await router.push('/community')
 }
 
+const goAdminCenter = async () => {
+  await router.push('/admin')
+}
+
 onMounted(async () => {
+  await userStore.refreshProfile()
+  if (isAdmin.value) {
+    await router.replace('/admin')
+    return
+  }
   await Promise.all([loadPets(), loadFollowingFeed(), loadProfile()])
 })
 </script>

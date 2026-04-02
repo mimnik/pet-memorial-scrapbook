@@ -5,6 +5,11 @@ INSERT INTO users (username, email, password, display_name, avatar_url, bio, rol
 VALUES ('demo', 'demo@example.com', '$2a$10$7QJQfVh93B4A2f2eM5X7yeIeV4A9z7fYwQf9XQbY17LJg8E5fSLfG', '演示用户', NULL, '这是一个用于演示的社区账号。', 'ROLE_USER', NOW(), NOW())
 ON DUPLICATE KEY UPDATE updated_at = NOW();
 
+-- 管理员账号: username=0001, password=123456
+INSERT INTO users (username, email, password, display_name, avatar_url, bio, role, created_at, updated_at)
+VALUES ('0001', '0001@pet-memorial.local', '$2a$10$7QJQfVh93B4A2f2eM5X7yeIeV4A9z7fYwQf9XQbY17LJg8E5fSLfG', '系统管理员', NULL, '默认管理员账号', 'ROLE_ADMIN', NOW(), NOW())
+ON DUPLICATE KEY UPDATE role = 'ROLE_ADMIN', updated_at = NOW();
+
 INSERT INTO community_topics (name, description, created_by_username, created_at, updated_at)
 VALUES ('纪念接力', '分享与你家宝贝的纪念故事', 'demo', NOW(), NOW())
 ON DUPLICATE KEY UPDATE updated_at = NOW();
@@ -41,3 +46,10 @@ SELECT cp.id, 'demo', '我先接力：愿每一段陪伴都被好好记住。', 
 FROM community_posts cp
 ORDER BY cp.id DESC
 LIMIT 1;
+
+INSERT INTO user_account_appeals (
+  username, appeal_type, details, status, handled_by_username, handled_at, handle_note, created_at, updated_at
+)
+VALUES (
+  'demo', 'ACCOUNT_SECURITY', '账号疑似被盗，请管理员协助核查。', 'PENDING', NULL, NULL, NULL, NOW(), NOW()
+);

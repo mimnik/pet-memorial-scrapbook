@@ -32,6 +32,11 @@ public class AuthController {
         return ApiResponse.success("登录成功", authService.login(request));
     }
 
+    @PostMapping("/guest")
+    public ApiResponse<AuthResponse> guestLogin() {
+        return ApiResponse.success("游客登录成功", authService.guestLogin());
+    }
+
     @GetMapping("/me")
     public ApiResponse<AuthResponse> me() {
         return ApiResponse.success(authService.me());

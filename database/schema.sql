@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url VARCHAR(500),
   bio VARCHAR(1000),
   role VARCHAR(20) NOT NULL DEFAULT 'ROLE_USER',
+  account_frozen BIT NOT NULL DEFAULT 0,
+  posting_restricted BIT NOT NULL DEFAULT 0,
+  warning_count INT NOT NULL DEFAULT 0,
+  admin_note VARCHAR(1000),
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL
 );
@@ -76,6 +80,7 @@ CREATE TABLE IF NOT EXISTS community_posts (
   relay_enabled BIT NOT NULL DEFAULT 0,
   like_count INT NOT NULL DEFAULT 0,
   comment_count INT NOT NULL DEFAULT 0,
+  hidden_by_admin BIT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_community_posts_feed (created_at DESC, id DESC),
@@ -91,6 +96,7 @@ CREATE TABLE IF NOT EXISTS community_comments (
   author_username VARCHAR(100) NOT NULL,
   content VARCHAR(1000) NOT NULL,
   relay_reply BIT NOT NULL DEFAULT 0,
+  hidden_by_admin BIT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_community_comments_post (post_id, created_at ASC, id ASC),
@@ -152,4 +158,21 @@ CREATE TABLE IF NOT EXISTS content_reports (
   INDEX idx_content_reports_reporter (reporter_username),
   CONSTRAINT fk_content_reports_reporter FOREIGN KEY (reporter_username) REFERENCES users(username) ON DELETE CASCADE,
   CONSTRAINT fk_content_reports_handler FOREIGN KEY (handled_by_username) REFERENCES users(username) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_account_appeals (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(100) NOT NULL,
+  appeal_type VARCHAR(40) NOT NULL,
+  details VARCHAR(2000) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  handled_by_username VARCHAR(100),
+  handled_at DATETIME,
+  handle_note VARCHAR(1000),
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_user_account_appeals_status (status),
+  INDEX idx_user_account_appeals_username (username),
+  CONSTRAINT fk_user_account_appeals_user FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+  CONSTRAINT fk_user_account_appeals_handler FOREIGN KEY (handled_by_username) REFERENCES users(username) ON DELETE SET NULL
 );

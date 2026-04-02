@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url VARCHAR(500),
   bio VARCHAR(1000),
   role VARCHAR(20) NOT NULL DEFAULT 'ROLE_USER',
+  account_frozen BIT NOT NULL DEFAULT 0,
+  posting_restricted BIT NOT NULL DEFAULT 0,
+  warning_count INT NOT NULL DEFAULT 0,
+  admin_note VARCHAR(1000),
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL
 );
@@ -76,6 +80,7 @@ CREATE TABLE IF NOT EXISTS community_posts (
   relay_enabled BIT NOT NULL DEFAULT 0,
   like_count INT NOT NULL DEFAULT 0,
   comment_count INT NOT NULL DEFAULT 0,
+  hidden_by_admin BIT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_community_posts_feed (created_at DESC, id DESC),
@@ -91,6 +96,7 @@ CREATE TABLE IF NOT EXISTS community_comments (
   author_username VARCHAR(100) NOT NULL,
   content VARCHAR(1000) NOT NULL,
   relay_reply BIT NOT NULL DEFAULT 0,
+  hidden_by_admin BIT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_community_comments_post (post_id, created_at ASC, id ASC),
@@ -154,10 +160,32 @@ CREATE TABLE IF NOT EXISTS content_reports (
   CONSTRAINT fk_content_reports_handler FOREIGN KEY (handled_by_username) REFERENCES users(username) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS user_account_appeals (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(100) NOT NULL,
+  appeal_type VARCHAR(40) NOT NULL,
+  details VARCHAR(2000) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  handled_by_username VARCHAR(100),
+  handled_at DATETIME,
+  handle_note VARCHAR(1000),
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_user_account_appeals_status (status),
+  INDEX idx_user_account_appeals_username (username),
+  CONSTRAINT fk_user_account_appeals_user FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+  CONSTRAINT fk_user_account_appeals_handler FOREIGN KEY (handled_by_username) REFERENCES users(username) ON DELETE SET NULL
+);
+
 -- password: 123456
 INSERT INTO users (username, email, password, display_name, avatar_url, bio, role, created_at, updated_at)
 VALUES ('demo', 'demo@example.com', '$2a$10$7QJQfVh93B4A2f2eM5X7yeIeV4A9z7fYwQf9XQbY17LJg8E5fSLfG', '演示用户', NULL, '这是一个用于演示的社区账号。', 'ROLE_USER', NOW(), NOW())
 ON DUPLICATE KEY UPDATE updated_at = NOW();
+
+-- 管理员账号: username=0001, password=123456
+INSERT INTO users (username, email, password, display_name, avatar_url, bio, role, created_at, updated_at)
+VALUES ('0001', '0001@pet-memorial.local', '$2a$10$7QJQfVh93B4A2f2eM5X7yeIeV4A9z7fYwQf9XQbY17LJg8E5fSLfG', '系统管理员', NULL, '默认管理员账号', 'ROLE_ADMIN', NOW(), NOW())
+ON DUPLICATE KEY UPDATE role = 'ROLE_ADMIN', updated_at = NOW();
 
 INSERT INTO community_topics (name, description, created_by_username, created_at, updated_at)
 VALUES ('纪念接力', '分享与你家宝贝的纪念故事', 'demo', NOW(), NOW())
@@ -189,3 +217,11 @@ FROM pets p
 LEFT JOIN community_topics t ON t.name = '纪念接力'
 WHERE p.share_token = 'demopublictoken1234567890'
 LIMIT 1;
+
+INSERT INTO user_account_appeals (
+  username, appeal_type, details, status, handled_by_username, handled_at, handle_note, created_at, updated_at
+)
+VALUES (
+  'demo', 'PASSWORD_RESET', '我忘记了密码，想申请重置。', 'PENDING', NULL, NULL, NULL, NOW(), NOW()
+)
+ON DUPLICATE KEY UPDATE updated_at = NOW();

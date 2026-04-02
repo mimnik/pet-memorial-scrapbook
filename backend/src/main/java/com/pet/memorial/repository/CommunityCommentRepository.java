@@ -9,5 +9,9 @@ public interface CommunityCommentRepository extends JpaRepository<CommunityComme
 
     List<CommunityComment> findByPostIdOrderByCreatedAtAscIdAsc(Long postId);
 
+    List<CommunityComment> findAllByOrderByCreatedAtDescIdDesc();
+
     long countByPostId(Long postId);
+
+    long countByPostIdAndHiddenByAdminFalse(Long postId);
 }

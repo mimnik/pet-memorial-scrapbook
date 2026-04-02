@@ -20,37 +20,106 @@
             {{ isRegister ? '注册并登录' : '登录' }}
           </el-button>
         </el-form-item>
+        <el-form-item v-if="!isRegister">
+          <el-button plain :loading="submitting" @click="submitGuest" style="width: 100%">
+            游客登录（仅浏览宠物微社区）
+          </el-button>
+        </el-form-item>
         <el-form-item>
           <el-button link type="primary" @click="toggleMode">
             {{ isRegister ? '已有账号，去登录' : '没有账号，去注册' }}
           </el-button>
         </el-form-item>
+        <el-form-item v-if="!isRegister">
+          <el-button link type="warning" @click="openAppealDialog">账号被封禁？提交申诉</el-button>
+        </el-form-item>
       </el-form>
+
+      <el-dialog v-model="appealDialogVisible" title="账号封禁申诉" width="520px">
+        <el-form :model="appealForm" label-width="92px">
+          <el-form-item label="用户名" required>
+            <el-input v-model="appealForm.username" maxlength="100" placeholder="请输入被冻结账号的用户名" />
+          </el-form-item>
+          <el-form-item label="申诉类型" required>
+            <el-select v-model="appealForm.appealType" style="width: 100%">
+              <el-option label="账号冻结申诉" value="ACCOUNT_FROZEN" />
+              <el-option label="限制发布申诉" value="POSTING_RESTRICTED" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="申诉说明" required>
+            <el-input
+              v-model="appealForm.details"
+              type="textarea"
+              :rows="4"
+              maxlength="2000"
+              placeholder="请填写情况说明，例如误封原因、账号信息校验方式等"
+            />
+          </el-form-item>
+        </el-form>
+
+        <template #footer>
+          <el-button @click="appealDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="appealSubmitting" @click="submitAppeal">提交申诉</el-button>
+        </template>
+      </el-dialog>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { createFrozenAccountAppeal } from '@/api/appeal'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const isRegister = ref(false)
 const submitting = ref(false)
 const authHint = ref('')
+const appealDialogVisible = ref(false)
+const appealSubmitting = ref(false)
 const form = ref({
   username: '',
   email: '',
   password: '',
 })
+const appealForm = ref({
+  username: '',
+  appealType: 'ACCOUNT_FROZEN',
+  details: '',
+})
 
 const toggleMode = () => {
   isRegister.value = !isRegister.value
   authHint.value = ''
+}
+
+const resolveLoginTarget = (role?: string) => {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  const safeRedirect = redirect.startsWith('/') ? redirect : ''
+
+  if (role === 'ROLE_ADMIN') {
+    return '/admin'
+  }
+  if (role === 'ROLE_GUEST') {
+    if (safeRedirect.startsWith('/community')) {
+      return safeRedirect
+    }
+    return '/community'
+  }
+
+  return safeRedirect || '/'
+}
+
+const openAppealDialog = () => {
+  appealForm.value.username = form.value.username.trim()
+  appealForm.value.appealType = 'ACCOUNT_FROZEN'
+  appealForm.value.details = ''
+  appealDialogVisible.value = true
 }
 
 const submit = async () => {
@@ -78,9 +147,14 @@ const submit = async () => {
         })
 
     ElMessage.success(isRegister.value ? '注册成功' : '登录成功')
-    await router.push('/')
+    const role = res.data.role || userStore.profile?.role
+    await router.push(resolveLoginTarget(role))
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : ''
+    if (message.includes('冻结')) {
+      authHint.value = '账号已被冻结，可点击下方“账号被封禁？提交申诉”按钮提交申诉'
+      return
+    }
     if (message.includes('账户不存在')) {
       authHint.value = '账户不存在，请确认用户名或先注册账号'
       return
@@ -94,6 +168,44 @@ const submit = async () => {
     }
   } finally {
     submitting.value = false
+  }
+}
+
+const submitGuest = async () => {
+  authHint.value = ''
+  submitting.value = true
+  try {
+    const res = await userStore.guestLogin()
+    ElMessage.success('游客登录成功')
+    await router.push(resolveLoginTarget(res.data.role))
+  } catch {
+    authHint.value = '游客登录失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+const submitAppeal = async () => {
+  if (!appealForm.value.username.trim()) {
+    ElMessage.warning('请填写用户名')
+    return
+  }
+  if (!appealForm.value.details.trim()) {
+    ElMessage.warning('请填写申诉说明')
+    return
+  }
+
+  appealSubmitting.value = true
+  try {
+    await createFrozenAccountAppeal({
+      username: appealForm.value.username.trim(),
+      appealType: appealForm.value.appealType,
+      details: appealForm.value.details.trim(),
+    })
+    ElMessage.success('申诉已提交，请等待管理员处理')
+    appealDialogVisible.value = false
+  } finally {
+    appealSubmitting.value = false
   }
 }
 </script>

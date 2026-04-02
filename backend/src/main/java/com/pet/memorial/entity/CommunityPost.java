@@ -63,6 +63,9 @@ public class CommunityPost extends BaseEntity {
     @Column(nullable = false)
     private Integer commentCount = 0;
 
+    @Column(nullable = false)
+    private Boolean hiddenByAdmin = Boolean.FALSE;
+
     public Long getId() {
         return id;
     }
@@ -189,5 +192,13 @@ public class CommunityPost extends BaseEntity {
 
     public void setCommentCount(Integer commentCount) {
         this.commentCount = commentCount;
+    }
+
+    public Boolean getHiddenByAdmin() {
+        return hiddenByAdmin;
+    }
+
+    public void setHiddenByAdmin(Boolean hiddenByAdmin) {
+        this.hiddenByAdmin = hiddenByAdmin;
     }
 }

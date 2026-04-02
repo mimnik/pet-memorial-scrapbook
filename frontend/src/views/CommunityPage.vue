@@ -6,13 +6,16 @@
         <p>支持搜索、个性化推荐和宠物热榜，用更有温度的方式记录陪伴。</p>
       </div>
       <div class="header-actions">
-        <el-button @click="goHome">返回主页</el-button>
-        <el-button type="primary" @click="openPostDialog">发布动态</el-button>
-        <el-button @click="openMessageDialog()">我的私信</el-button>
-        <el-button @click="openMyReportsDialog">我的举报</el-button>
+        <el-button v-if="!isGuest" @click="goHome">返回主页</el-button>
+        <el-button v-if="isAdmin" type="warning" plain @click="goAdminCenter">管理员中心</el-button>
+        <el-button v-if="isGuest" type="primary" plain @click="goLogin">去登录账号</el-button>
+        <el-button v-if="!isGuest" type="primary" @click="openPostDialog">发布动态</el-button>
+        <el-button v-if="!isGuest" @click="openMessageDialog()">我的私信</el-button>
+        <el-button v-if="!isGuest" @click="openMyReportsDialog">我的举报</el-button>
         <el-button v-if="isAdmin" type="warning" plain @click="openAdminReportsDialog">举报处理</el-button>
-        <el-button type="success" plain @click="loadFollowing">只看关注</el-button>
-        <el-button type="info" plain @click="loadMine">只看我的</el-button>
+        <el-button v-if="!isGuest" type="success" plain @click="loadFollowing">只看关注</el-button>
+        <el-button v-if="!isGuest" type="info" plain @click="loadMine">只看我的</el-button>
+        <el-tag v-if="isGuest" type="info" effect="plain">游客仅可浏览动态</el-tag>
       </div>
     </header>
 
@@ -55,7 +58,10 @@
                 <div>
                   <h3>{{ post.title }}</h3>
                   <p class="feed-meta">
-                    <span>@{{ post.authorUsername }}</span>
+                    <button v-if="!isGuest" class="author-link" type="button" @click="goUserHome(post.authorUsername)">
+                      @{{ post.authorUsername }}
+                    </button>
+                    <span v-else>@{{ post.authorUsername }}</span>
                     <span> · {{ post.petName }}</span>
                     <span> · {{ formatMode(post.narrativeMode) }}</span>
                     <span> · {{ formatMood(post.moodTag) }}</span>
@@ -97,30 +103,30 @@
             </div>
 
             <div class="feed-actions">
-              <el-button link @click="onToggleLike(post)">
+              <el-button v-if="!isGuest" link @click="onToggleLike(post)">
                 {{ post.likedByMe ? '取消赞' : '点赞' }} ({{ post.likeCount }})
               </el-button>
-              <el-button link @click="openCommentDialog(post)">评论 ({{ post.commentCount }})</el-button>
+              <el-button v-if="!isGuest" link @click="openCommentDialog(post)">评论 ({{ post.commentCount }})</el-button>
               <el-button
-                v-if="post.authorUsername !== currentUsername"
+                v-if="!isGuest && post.authorUsername !== currentUsername"
                 link
                 type="primary"
                 @click="onToggleFollow(post)"
               >
                 {{ post.authorFollowedByMe ? '取消关注' : '关注作者' }}
               </el-button>
-              <el-button v-if="post.authorUsername !== currentUsername" link @click="openMessageDialog(post.authorUsername)">
+              <el-button v-if="!isGuest && post.authorUsername !== currentUsername" link @click="openMessageDialog(post.authorUsername)">
                 私信
               </el-button>
-              <el-button link type="primary" @click="goUserHome(post.authorUsername)">查看主页</el-button>
-              <el-button link type="danger" @click="openReportDialog(post)">举报</el-button>
+              <el-button v-if="!isGuest" link type="primary" @click="goUserHome(post.authorUsername)">查看主页</el-button>
+              <el-button v-if="!isGuest" link type="danger" @click="openReportDialog(post)">举报</el-button>
             </div>
           </el-card>
         </div>
       </el-col>
 
       <el-col :xs="24" :lg="8">
-        <el-card class="side-card" shadow="hover">
+        <el-card v-if="!isGuest" class="side-card" shadow="hover">
           <template #header>
             <span>搜索用户主页</span>
           </template>
@@ -197,7 +203,7 @@
               <div class="hot-right">
                 <span>{{ item.heatScore.toFixed(1) }}</span>
                 <small>{{ item.postCount }} 帖</small>
-                <el-button link type="primary" @click.stop="goHotPetHome(item)">查看主页</el-button>
+                <el-button v-if="!isGuest" link type="primary" @click.stop="goHotPetHome(item)">查看主页</el-button>
               </div>
             </li>
           </ol>
@@ -583,6 +589,7 @@ const reportForm = ref({
 
 const currentUsername = computed(() => userStore.profile?.username || '')
 const isAdmin = computed(() => userStore.profile?.role === 'ROLE_ADMIN')
+const isGuest = computed(() => userStore.profile?.role === 'ROLE_GUEST')
 
 const moodText: Record<CommunityMoodTag, string> = {
   SUNNY: '晴朗',
@@ -668,7 +675,20 @@ const goHome = async () => {
   await router.push('/')
 }
 
+const goAdminCenter = async () => {
+  await router.push('/admin')
+}
+
+const goLogin = async () => {
+  await router.push('/login')
+}
+
 const goUserHome = async (username: string, petShareToken?: string) => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式仅支持浏览社区动态')
+    return
+  }
+
   const target = username.trim()
   if (!target) {
     return
@@ -697,6 +717,11 @@ const onSearchPublicUsers = async () => {
 }
 
 const goHotPetHome = async (item: PetHotRank) => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式仅支持浏览社区动态')
+    return
+  }
+
   await goUserHome(item.ownerUsername, item.petShareToken)
 }
 
@@ -718,6 +743,10 @@ const resetPostForm = () => {
 }
 
 const openPostDialog = () => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持发布功能')
+    return
+  }
   resetPostForm()
   postDialogVisible.value = true
 }
@@ -779,11 +808,19 @@ const loadAll = async () => {
 }
 
 const loadMine = async () => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持查看个人动态')
+    return
+  }
   const res = await listMyCommunityPosts()
   posts.value = res.data
 }
 
 const loadFollowing = async () => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持关注功能')
+    return
+  }
   const res = await listFollowingCommunityFeed()
   posts.value = res.data
 }
@@ -793,6 +830,10 @@ const onFilterChange = async () => {
 }
 
 const submitTopic = async () => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持创建话题')
+    return
+  }
   if (!topicForm.value.name.trim()) {
     ElMessage.warning('请填写话题名称')
     return
@@ -843,6 +884,11 @@ const uploadPostVideo = async (options: UploadRequestOptions) => {
 }
 
 const submitPost = async () => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持发布功能')
+    return
+  }
+
   if (!postForm.value.petId) {
     ElMessage.warning('请先选择宠物')
     return
@@ -878,6 +924,11 @@ const submitPost = async () => {
 }
 
 const onToggleLike = async (post: CommunityPost) => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持点赞')
+    return
+  }
+
   const res = await toggleCommunityLike(post.id)
   const updated = res.data
   const idx = posts.value.findIndex((item) => item.id === updated.id)
@@ -894,6 +945,11 @@ const onToggleLike = async (post: CommunityPost) => {
 }
 
 const onToggleFollow = async (post: CommunityPost) => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持关注')
+    return
+  }
+
   if (!post.authorUsername || post.authorUsername === currentUsername.value) {
     return
   }
@@ -917,6 +973,11 @@ const onToggleFollow = async (post: CommunityPost) => {
 }
 
 const openCommentDialog = async (post: CommunityPost) => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持评论')
+    return
+  }
+
   activeCommentPostId.value = post.id
   commentDialogVisible.value = true
   commentForm.value.content = ''
@@ -926,6 +987,11 @@ const openCommentDialog = async (post: CommunityPost) => {
 }
 
 const submitComment = async () => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持评论')
+    return
+  }
+
   if (!activeCommentPostId.value) {
     return
   }
@@ -988,6 +1054,11 @@ const selectConversation = async (username: string) => {
 }
 
 const openMessageDialog = async (username?: string) => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持私信')
+    return
+  }
+
   messageDialogVisible.value = true
   await loadConversations()
 
@@ -1028,6 +1099,11 @@ const submitMessage = async () => {
 }
 
 const openReportDialog = (post: CommunityPost) => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持举报')
+    return
+  }
+
   reportForm.value = {
     targetType: 'POST',
     targetId: post.id,
@@ -1064,6 +1140,11 @@ const loadMyReports = async () => {
 }
 
 const openMyReportsDialog = async () => {
+  if (isGuest.value) {
+    ElMessage.warning('游客模式不支持举报记录')
+    return
+  }
+
   myReportsDialogVisible.value = true
   await loadMyReports()
 }
@@ -1113,6 +1194,12 @@ onMounted(async () => {
   if (!userStore.profile) {
     await userStore.refreshProfile()
   }
+
+  if (isGuest.value) {
+    await Promise.all([loadTopics(), loadFeed(), loadRecommendations(), loadHotPets()])
+    return
+  }
+
   await Promise.all([loadPets(), loadTopics(), loadFeed(), loadRecommendations(), loadHotPets()])
 })
 </script>
@@ -1201,6 +1288,19 @@ onMounted(async () => {
 .feed-meta {
   color: #6f7889;
   font-size: 13px;
+}
+
+.author-link {
+  border: none;
+  background: transparent;
+  color: #2f6fce;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.author-link:hover {
+  text-decoration: underline;
 }
 
 .feed-tags {

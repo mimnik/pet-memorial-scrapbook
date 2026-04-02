@@ -45,7 +45,19 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/test/**", "/api/public/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/account-appeals/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/community/feed",
+                    "/api/community/recommendations",
+                    "/api/community/hot-pets",
+                    "/api/community/topics",
+                    "/api/community/posts/*/comments"
+                ).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN", "ROLE_GUEST")
+                .requestMatchers("/api/community/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                .requestMatchers("/api/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

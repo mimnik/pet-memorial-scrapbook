@@ -2,7 +2,7 @@
   <div class="share-page">
     <div class="top-bar">
       <h1>宠物公开纪念页</h1>
-      <router-link to="/login">返回登录</router-link>
+      <button type="button" class="back-link" @click="goBackHome">返回主页</button>
     </div>
 
     <el-card v-if="data" class="pet-card">
@@ -52,12 +52,14 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getPublicPetByToken } from '@/api/public'
 import type { PublicPetView } from '@/types/public'
+import { getToken } from '@/utils/auth'
 
 const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const data = ref<PublicPetView | null>(null)
 
@@ -70,6 +72,20 @@ const formatDuration = (seconds: number) => {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
   }
   return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
+}
+
+const goBackHome = async () => {
+  if (getToken()) {
+    await router.push('/')
+    return
+  }
+
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  await router.push('/login')
 }
 
 onMounted(async () => {
@@ -100,6 +116,14 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.back-link {
+  border: none;
+  background: transparent;
+  color: #3576da;
+  cursor: pointer;
+  font-size: 14px;
 }
 
 .pet-card {

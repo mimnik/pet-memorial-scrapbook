@@ -12,12 +12,14 @@ import com.pet.memorial.entity.CommunityPost;
 import com.pet.memorial.entity.CommunityPostLike;
 import com.pet.memorial.entity.CommunityTopic;
 import com.pet.memorial.entity.Pet;
+import com.pet.memorial.entity.User;
 import com.pet.memorial.exception.ResourceNotFoundException;
 import com.pet.memorial.repository.CommunityCommentRepository;
 import com.pet.memorial.repository.CommunityPostLikeRepository;
 import com.pet.memorial.repository.CommunityPostRepository;
 import com.pet.memorial.repository.CommunityTopicRepository;
 import com.pet.memorial.repository.PetRepository;
+import com.pet.memorial.repository.UserRepository;
 import com.pet.memorial.repository.UserFollowRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,19 +46,22 @@ public class CommunityService implements CommunityOperations {
     private final CommunityTopicRepository communityTopicRepository;
     private final UserFollowRepository userFollowRepository;
     private final PetRepository petRepository;
+    private final UserRepository userRepository;
 
     public CommunityService(CommunityPostRepository communityPostRepository,
                             CommunityCommentRepository communityCommentRepository,
                             CommunityPostLikeRepository communityPostLikeRepository,
                             CommunityTopicRepository communityTopicRepository,
                             UserFollowRepository userFollowRepository,
-                            PetRepository petRepository) {
+                            PetRepository petRepository,
+                            UserRepository userRepository) {
         this.communityPostRepository = communityPostRepository;
         this.communityCommentRepository = communityCommentRepository;
         this.communityPostLikeRepository = communityPostLikeRepository;
         this.communityTopicRepository = communityTopicRepository;
         this.userFollowRepository = userFollowRepository;
         this.petRepository = petRepository;
+        this.userRepository = userRepository;
     }
 
     public List<CommunityPostResponse> listFeed(String narrativeMode, String moodTag, String keyword, Long topicId) {
@@ -69,6 +74,7 @@ public class CommunityService implements CommunityOperations {
         Set<String> followingUsernames = loadFollowingUsernameSet(currentUsername);
 
         return communityPostRepository.findFeed(mode, mood, keywordNormalized, safeTopicId).stream()
+            .filter(post -> !Boolean.TRUE.equals(post.getHiddenByAdmin()))
             .map(post -> toPostResponse(post, currentUsername, followingUsernames))
             .toList();
     }
@@ -85,6 +91,7 @@ public class CommunityService implements CommunityOperations {
         );
 
         return posts.stream()
+            .filter(post -> !Boolean.TRUE.equals(post.getHiddenByAdmin()))
             .map(post -> toPostResponse(post, currentUsername, followingUsernames))
             .toList();
     }
@@ -97,6 +104,9 @@ public class CommunityService implements CommunityOperations {
         List<CommunityPost> allPosts = communityPostRepository.findAllByOrderByCreatedAtDescIdDesc();
         List<CommunityPostResponse> result = new ArrayList<>();
         for (CommunityPost post : allPosts) {
+            if (Boolean.TRUE.equals(post.getHiddenByAdmin())) {
+                continue;
+            }
             CommunityPostResponse response = toPostResponse(post, currentUsername, followingUsernames);
             response.setRecommendationScore(calculateRecommendationScore(post));
             result.add(response);
@@ -114,6 +124,9 @@ public class CommunityService implements CommunityOperations {
 
         Map<Long, PetHotRankResponse> rankings = new HashMap<>();
         for (CommunityPost post : allPosts) {
+            if (Boolean.TRUE.equals(post.getHiddenByAdmin())) {
+                continue;
+            }
             Pet pet = post.getPet();
             PetHotRankResponse row = rankings.computeIfAbsent(pet.getId(), key -> {
                 PetHotRankResponse init = new PetHotRankResponse();
@@ -154,12 +167,14 @@ public class CommunityService implements CommunityOperations {
         Set<String> followingUsernames = loadFollowingUsernameSet(currentUsername);
 
         return communityPostRepository.findByAuthorUsernameOrderByCreatedAtDescIdDesc(currentUsername).stream()
+            .filter(post -> !Boolean.TRUE.equals(post.getHiddenByAdmin()))
             .map(post -> toPostResponse(post, currentUsername, followingUsernames))
             .toList();
     }
 
     public CommunityPostResponse createPost(CommunityPostRequest request) {
         String currentUsername = getCurrentUsername();
+        ensureUserCanPost(currentUsername);
         Pet pet = petRepository.findByIdAndOwnerUsername(request.getPetId(), currentUsername)
             .orElseThrow(() -> new ResourceNotFoundException("未找到可发布的宠物，id=" + request.getPetId()));
 
@@ -186,6 +201,7 @@ public class CommunityService implements CommunityOperations {
         post.setRelayEnabled(Boolean.TRUE.equals(request.getRelayEnabled()));
         post.setLikeCount(0);
         post.setCommentCount(0);
+        post.setHiddenByAdmin(Boolean.FALSE);
 
         CommunityPost saved = communityPostRepository.save(post);
         Set<String> followingUsernames = loadFollowingUsernameSet(currentUsername);
@@ -218,12 +234,14 @@ public class CommunityService implements CommunityOperations {
     public List<CommunityCommentResponse> listComments(Long postId) {
         getPost(postId);
         return communityCommentRepository.findByPostIdOrderByCreatedAtAscIdAsc(postId).stream()
+            .filter(comment -> !Boolean.TRUE.equals(comment.getHiddenByAdmin()))
             .map(this::toCommentResponse)
             .toList();
     }
 
     public CommunityCommentResponse createComment(Long postId, CommunityCommentRequest request) {
         String currentUsername = getCurrentUsername();
+        ensureUserCanPost(currentUsername);
         CommunityPost post = getPost(postId);
 
         CommunityComment comment = new CommunityComment();
@@ -233,10 +251,11 @@ public class CommunityService implements CommunityOperations {
 
         boolean relayReply = Boolean.TRUE.equals(request.getRelayReply()) && Boolean.TRUE.equals(post.getRelayEnabled());
         comment.setRelayReply(relayReply);
+        comment.setHiddenByAdmin(Boolean.FALSE);
 
         CommunityComment saved = communityCommentRepository.save(comment);
 
-        long commentCount = communityCommentRepository.countByPostId(postId);
+        long commentCount = communityCommentRepository.countByPostIdAndHiddenByAdminFalse(postId);
         post.setCommentCount((int) commentCount);
         communityPostRepository.save(post);
 
@@ -269,8 +288,12 @@ public class CommunityService implements CommunityOperations {
         if (postId == null) {
             throw new IllegalArgumentException("帖子ID不能为空");
         }
-        return communityPostRepository.findById(postId)
+        CommunityPost post = communityPostRepository.findById(postId)
             .orElseThrow(() -> new ResourceNotFoundException("未找到社区帖子，id=" + postId));
+        if (Boolean.TRUE.equals(post.getHiddenByAdmin())) {
+            throw new ResourceNotFoundException("未找到社区帖子，id=" + postId);
+        }
+        return post;
     }
 
     private CommunityPostResponse toPostResponse(CommunityPost post, String currentUsername, Set<String> followingUsernames) {
@@ -334,6 +357,17 @@ public class CommunityService implements CommunityOperations {
             throw new IllegalStateException("当前用户未认证");
         }
         return authentication.getName();
+    }
+
+    private void ensureUserCanPost(String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+        if (Boolean.TRUE.equals(user.getAccountFrozen())) {
+            throw new IllegalArgumentException("账号已被冻结，无法发布内容");
+        }
+        if (Boolean.TRUE.equals(user.getPostingRestricted())) {
+            throw new IllegalArgumentException("当前账号已被限制发布，请联系管理员");
+        }
     }
 
     private Set<String> loadFollowingUsernameSet(String username) {

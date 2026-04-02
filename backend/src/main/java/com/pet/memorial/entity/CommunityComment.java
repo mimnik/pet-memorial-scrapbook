@@ -30,6 +30,9 @@ public class CommunityComment extends BaseEntity {
     @Column(nullable = false)
     private Boolean relayReply = Boolean.FALSE;
 
+    @Column(nullable = false)
+    private Boolean hiddenByAdmin = Boolean.FALSE;
+
     public Long getId() {
         return id;
     }
@@ -68,5 +71,13 @@ public class CommunityComment extends BaseEntity {
 
     public void setRelayReply(Boolean relayReply) {
         this.relayReply = relayReply;
+    }
+
+    public Boolean getHiddenByAdmin() {
+        return hiddenByAdmin;
+    }
+
+    public void setHiddenByAdmin(Boolean hiddenByAdmin) {
+        this.hiddenByAdmin = hiddenByAdmin;
     }
 }

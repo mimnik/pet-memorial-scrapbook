@@ -5,7 +5,7 @@
         <h1>@{{ homeData?.ownerUsername || ownerUsername }} 的宠物纪念主页</h1>
         <p>可切换查看该用户公开的宠物、回忆和社区动态。</p>
       </div>
-      <router-link to="/login" class="back-link">返回登录</router-link>
+      <button type="button" class="back-link" @click="goBackHome">返回主页</button>
     </header>
 
     <el-empty v-if="!loading && !homeData" description="该用户暂无公开宠物主页" />
@@ -145,6 +145,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getUserPublicHome } from '@/api/public'
 import type { UserPublicHome } from '@/types/public'
+import { getToken } from '@/utils/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -223,6 +224,20 @@ const switchPet = async (shareToken: string) => {
   })
 }
 
+const goBackHome = async () => {
+  if (getToken()) {
+    await router.push('/')
+    return
+  }
+
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  await router.push('/login')
+}
+
 watch(
   () => [ownerUsername.value, activePetToken.value],
   async () => {
@@ -261,7 +276,11 @@ onMounted(async () => {
 }
 
 .back-link {
+  border: none;
+  background: transparent;
   color: #3576da;
+  cursor: pointer;
+  font-size: 14px;
   text-decoration: none;
 }
 
