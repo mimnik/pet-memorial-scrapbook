@@ -27,59 +27,14 @@ function Stop-ProcessOnPort {
     }
 }
 
-function Ensure-NodeToolchain {
-    param([string]$RepoRoot)
-
-    $nodeReady = $false
-    try {
-        if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
-            $null = & node -v
-            $null = & npm -v
-            $nodeReady = $true
-        }
-    }
-    catch {
-        $nodeReady = $false
-    }
-
-    if ($nodeReady) {
-        return
-    }
-
-    $portableNodeDir = $null
-    $preferredPortableDir = Join-Path $RepoRoot '.tools\node'
-    if (Test-Path (Join-Path $preferredPortableDir 'node.exe')) {
-        $portableNodeDir = $preferredPortableDir
-    }
-
-    if (-not $portableNodeDir) {
-        $toolsDir = Join-Path $RepoRoot '.tools'
-        if (Test-Path $toolsDir) {
-            $candidate = Get-ChildItem -Path $toolsDir -Directory -Filter 'node-v*-win-x64' |
-                Where-Object { Test-Path (Join-Path $_.FullName 'node.exe') } |
-                Sort-Object Name -Descending |
-                Select-Object -First 1
-            if ($candidate) {
-                $portableNodeDir = $candidate.FullName
-            }
-        }
-    }
-
-    if ($portableNodeDir) {
-        $env:Path = "$portableNodeDir;$env:Path"
-        Write-Host "Using portable Node.js from $portableNodeDir"
-    }
-}
-
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDir '..')
+$workspaceRoot = Resolve-Path (Join-Path $repoRoot '..')
 $backendDir = Join-Path $repoRoot 'backend'
 $frontendDir = Join-Path $repoRoot 'frontend'
-$frpDir = Join-Path $repoRoot 'frp'
+$frpDir = Join-Path $workspaceRoot 'frp'
 $frpcExe = Join-Path $frpDir 'frpc.exe'
 $frpcConfig = Join-Path $frpDir 'frpc.toml'
-
-Ensure-NodeToolchain -RepoRoot $repoRoot
 
 if ($CleanPorts) {
     Stop-ProcessOnPort -Port 8080
@@ -90,13 +45,8 @@ if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
     throw 'java command not found. Please install JDK 21 first.'
 }
 
-try {
-    $nodeVersion = (& node -v).Trim()
-    $npmVersion = (& npm -v).Trim()
-    Write-Host "Detected Node.js $nodeVersion, npm $npmVersion"
-}
-catch {
-    throw 'node/npm not usable. Please install Node.js 20.19+ or 22.12+ (npm 10+) and ensure PATH is correct.'
+if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    throw 'npm command not found. Please install Node.js first.'
 }
 
 Push-Location $backendDir

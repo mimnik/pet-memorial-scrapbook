@@ -15,17 +15,27 @@ VALUES ('纪念接力', '分享与你家宝贝的纪念故事', 'demo', NOW(), N
 ON DUPLICATE KEY UPDATE updated_at = NOW();
 
 INSERT INTO pets (
-  name, species, breed, gender, birth_date, memorial_date, avatar_url, description,
+  name, species, breed, gender, birth_date, memorial_date, age, weight, marital_status, skills, dietary_habits, physical_condition, avatar_url, description,
   owner_username, is_public, share_token, created_at, updated_at
 )
 VALUES (
-  '可乐', '猫', '英短', '公', '2018-05-20', NULL, NULL, '一只性格温柔的小伙伴',
+  '可乐', '猫', '英短', '公', '2018-05-20', NULL, 8, '4.8kg', '未婚', '接飞盘、握手', '偏爱鸡胸肉和湿粮', '状态稳定，食欲良好', NULL, '一只性格温柔的小伙伴',
   'demo', b'1', 'demopublictoken1234567890', NOW(), NOW()
 )
 ON DUPLICATE KEY UPDATE updated_at = NOW();
 
 INSERT INTO memory_entries (pet_id, title, content, event_date, location, image_url, created_at, updated_at)
 SELECT p.id, '第一次见面', '那天抱回家的时候，它一直在打呼噜。', '2018-06-01', '广州', NULL, NOW(), NOW()
+FROM pets p
+WHERE p.share_token = 'demopublictoken1234567890'
+LIMIT 1;
+
+INSERT INTO pet_archive_records (
+  pet_id, archive_type, title, metric_value, unit, event_date, note,
+  reminder_enabled, reminder_at, reminder_status, reminder_completed_at, created_at, updated_at
+)
+SELECT p.id, 'CHECKUP', '月度体检记录', '状态良好', NULL, CURDATE(), '维持良好健康状态',
+  b'0', NULL, 'PENDING', NULL, NOW(), NOW()
 FROM pets p
 WHERE p.share_token = 'demopublictoken1234567890'
 LIMIT 1;

@@ -4,11 +4,14 @@ import com.pet.memorial.dto.PetRequest;
 import com.pet.memorial.entity.Pet;
 import com.pet.memorial.exception.ResourceNotFoundException;
 import com.pet.memorial.repository.MemoryEntryRepository;
+import com.pet.memorial.repository.PetArchiveRecordRepository;
 import com.pet.memorial.repository.PetRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -18,10 +21,16 @@ public class PetService {
 
     private final PetRepository petRepository;
     private final MemoryEntryRepository memoryEntryRepository;
+    private final PetArchiveRecordRepository petArchiveRecordRepository;
 
-    public PetService(PetRepository petRepository, MemoryEntryRepository memoryEntryRepository) {
+    public PetService(
+        PetRepository petRepository,
+        MemoryEntryRepository memoryEntryRepository,
+        PetArchiveRecordRepository petArchiveRecordRepository
+    ) {
         this.petRepository = petRepository;
         this.memoryEntryRepository = memoryEntryRepository;
+        this.petArchiveRecordRepository = petArchiveRecordRepository;
     }
 
     public List<Pet> listPets() {
@@ -52,6 +61,7 @@ public class PetService {
         Pet pet = getPet(id);
         Long safeId = Objects.requireNonNull(id, "id不能为空");
         memoryEntryRepository.deleteByPetId(safeId);
+        petArchiveRecordRepository.deleteByPetId(safeId);
         petRepository.delete(Objects.requireNonNull(pet));
     }
 
@@ -62,9 +72,26 @@ public class PetService {
         pet.setGender(request.getGender());
         pet.setBirthDate(request.getBirthDate());
         pet.setMemorialDate(request.getMemorialDate());
+        pet.setAge(calculateAge(request.getBirthDate()));
+        pet.setWeight(request.getWeight());
+        pet.setMaritalStatus(request.getMaritalStatus());
+        pet.setSkills(request.getSkills());
+        pet.setDietaryHabits(request.getDietaryHabits());
+        pet.setPhysicalCondition(request.getPhysicalCondition());
         pet.setAvatarUrl(request.getAvatarUrl());
         pet.setDescription(request.getDescription());
         pet.setIsPublic(Boolean.TRUE.equals(request.getIsPublic()));
+    }
+
+    private Integer calculateAge(LocalDate birthDate) {
+        if (birthDate == null) {
+            return null;
+        }
+        LocalDate today = LocalDate.now();
+        if (birthDate.isAfter(today)) {
+            return 0;
+        }
+        return Period.between(birthDate, today).getYears();
     }
 
     public Pet getPublicPetByShareToken(String shareToken) {

@@ -1,6 +1,7 @@
 package com.pet.memorial.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -20,9 +21,25 @@ public class PetRequest {
     @Size(max = 20, message = "性别长度不能超过20")
     private String gender;
 
+    @PastOrPresent(message = "生日不能晚于今天")
     private LocalDate birthDate;
 
     private LocalDate memorialDate;
+
+    @Size(max = 20, message = "体重长度不能超过20")
+    private String weight;
+
+    @Size(max = 20, message = "婚姻状况长度不能超过20")
+    private String maritalStatus;
+
+    @Size(max = 500, message = "技能长度不能超过500")
+    private String skills;
+
+    @Size(max = 1000, message = "饮食习惯长度不能超过1000")
+    private String dietaryHabits;
+
+    @Size(max = 1000, message = "身体状况长度不能超过1000")
+    private String physicalCondition;
 
     @Size(max = 500, message = "头像地址长度不能超过500")
     private String avatarUrl;
@@ -78,6 +95,46 @@ public class PetRequest {
 
     public void setMemorialDate(LocalDate memorialDate) {
         this.memorialDate = memorialDate;
+    }
+
+    public String getWeight() {
+        return weight;
+    }
+
+    public void setWeight(String weight) {
+        this.weight = weight;
+    }
+
+    public String getMaritalStatus() {
+        return maritalStatus;
+    }
+
+    public void setMaritalStatus(String maritalStatus) {
+        this.maritalStatus = maritalStatus;
+    }
+
+    public String getSkills() {
+        return skills;
+    }
+
+    public void setSkills(String skills) {
+        this.skills = skills;
+    }
+
+    public String getDietaryHabits() {
+        return dietaryHabits;
+    }
+
+    public void setDietaryHabits(String dietaryHabits) {
+        this.dietaryHabits = dietaryHabits;
+    }
+
+    public String getPhysicalCondition() {
+        return physicalCondition;
+    }
+
+    public void setPhysicalCondition(String physicalCondition) {
+        this.physicalCondition = physicalCondition;
     }
 
     public String getAvatarUrl() {

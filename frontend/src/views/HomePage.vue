@@ -208,6 +208,31 @@
         <el-form-item label="纪念日">
           <el-date-picker v-model="petForm.memorialDate" type="date" value-format="YYYY-MM-DD" />
         </el-form-item>
+        <el-form-item label="年龄">
+          <el-input :model-value="displayAutoAgeByBirthDate(petForm.birthDate)" disabled />
+        </el-form-item>
+        <el-form-item label="体重">
+          <el-input v-model="petForm.weight" maxlength="20" placeholder="例如：4.8kg" />
+        </el-form-item>
+        <el-form-item label="婚姻状况">
+          <el-select v-model="petForm.maritalStatus" placeholder="请选择婚姻状况" clearable>
+            <el-option
+              v-for="option in maritalStatusOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="技能">
+          <el-input v-model="petForm.skills" maxlength="500" placeholder="例如：接飞盘、握手" />
+        </el-form-item>
+        <el-form-item label="饮食习惯">
+          <el-input v-model="petForm.dietaryHabits" type="textarea" :rows="2" maxlength="1000" />
+        </el-form-item>
+        <el-form-item label="身体状况">
+          <el-input v-model="petForm.physicalCondition" type="textarea" :rows="2" maxlength="1000" />
+        </el-form-item>
         <el-form-item label="头像链接">
           <div class="upload-row">
             <el-input v-model="petForm.avatarUrl" placeholder="上传后自动填写或手动输入 https://..." />
@@ -349,6 +374,11 @@ const petForm = ref<PetPayload>({
   gender: '',
   birthDate: '',
   memorialDate: '',
+  weight: '',
+  maritalStatus: '',
+  skills: '',
+  dietaryHabits: '',
+  physicalCondition: '',
   avatarUrl: '',
   description: '',
   isPublic: false,
@@ -382,6 +412,13 @@ const petGenderOptions = [
   { label: '母', value: '母' },
   { label: '未知', value: '未知' },
 ]
+const maritalStatusOptions = [
+  { label: '未婚', value: '未婚' },
+  { label: '已婚', value: '已婚' },
+  { label: '离异', value: '离异' },
+  { label: '丧偶', value: '丧偶' },
+  { label: '未知', value: '未知' },
+]
 
 const sanitizePayload = <T extends Record<string, unknown>>(payload: T) => {
   return Object.fromEntries(
@@ -399,6 +436,33 @@ const formatDuration = (seconds: number) => {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
   }
   return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
+}
+
+const calculateAgeByBirthDate = (birthDate?: string) => {
+  if (!birthDate) {
+    return null
+  }
+  const parts = birthDate.split('-').map((item) => Number(item))
+  if (parts.length < 3 || parts.some((item) => !Number.isFinite(item))) {
+    return null
+  }
+  const [year, month, day] = parts
+  if (!year || !month || !day) {
+    return null
+  }
+  const today = new Date()
+  let age = today.getFullYear() - year
+  const currentMonth = today.getMonth() + 1
+  const currentDay = today.getDate()
+  if (currentMonth < month || (currentMonth === month && currentDay < day)) {
+    age -= 1
+  }
+  return Math.max(age, 0)
+}
+
+const displayAutoAgeByBirthDate = (birthDate?: string) => {
+  const age = calculateAgeByBirthDate(birthDate)
+  return age === null ? '根据生日自动生成' : `${age}岁`
 }
 
 const formatPostTime = (value: string) => {
@@ -527,6 +591,11 @@ const resetPetForm = () => {
     gender: '',
     birthDate: '',
     memorialDate: '',
+    weight: '',
+    maritalStatus: '',
+    skills: '',
+    dietaryHabits: '',
+    physicalCondition: '',
     avatarUrl: '',
     description: '',
     isPublic: false,
@@ -568,6 +637,11 @@ const openEditPetDialog = (pet: Pet) => {
     gender: pet.gender || '',
     birthDate: pet.birthDate || '',
     memorialDate: pet.memorialDate || '',
+    weight: pet.weight || '',
+    maritalStatus: pet.maritalStatus || '',
+    skills: pet.skills || '',
+    dietaryHabits: pet.dietaryHabits || '',
+    physicalCondition: pet.physicalCondition || '',
     avatarUrl: pet.avatarUrl || '',
     description: pet.description || '',
     isPublic: pet.isPublic,
@@ -787,6 +861,11 @@ const copyShareLink = async () => {
       gender: candidate.gender || '',
       birthDate: candidate.birthDate || '',
       memorialDate: candidate.memorialDate || '',
+      weight: candidate.weight || '',
+      maritalStatus: candidate.maritalStatus || '',
+      skills: candidate.skills || '',
+      dietaryHabits: candidate.dietaryHabits || '',
+      physicalCondition: candidate.physicalCondition || '',
       avatarUrl: candidate.avatarUrl || '',
       description: candidate.description || '',
       isPublic: true,

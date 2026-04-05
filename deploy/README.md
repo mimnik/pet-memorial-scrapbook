@@ -19,4 +19,4 @@ docker compose down
 
 ## Notes
 - 首次启动会自动执行 ../database 下的 schema.sql 和 seed.sql。
-- 上传文件保存在 Docker volume: uploads_data。
+- 上传文件保存在服务器目录：/home/PetDatabase（宿主机路径）。

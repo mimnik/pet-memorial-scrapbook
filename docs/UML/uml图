@@ -1,0 +1,80 @@
+用户关系分析（按当前权限模型）
+@startuml
+!theme plain
+left to right direction
+
+actor "用户" as User
+actor "游客(ROLE_GUEST)" as Guest
+actor "认证用户" as AuthUser
+actor "普通用户(ROLE_USER)" as NormalUser
+actor "系统管理员(ROLE_ADMIN)" as Admin
+
+User <|-- Guest
+User <|-- AuthUser
+AuthUser <|-- NormalUser
+AuthUser <|-- Admin
+
+@enduml
+
+系统总用例图（访客范围与管理员治理能力）
+@startuml
+!theme plain
+left to right direction
+
+actor "普通用户" as U
+actor "游客" as G
+actor "系统管理员" as A
+
+rectangle "宠物数字纪念册系统" {
+	usecase "用户认证\n/auth/*" as UC_AUTH
+	usecase "宠物与回忆管理" as UC_PET
+	usecase "宠物档案与提醒" as UC_ARCHIVE
+	usecase "社区只读浏览\nfeed/recommend/hot/topics/comments" as UC_COMM_READ
+	usecase "社区写操作\nposts/like/comment/topic-create" as UC_COMM_WRITE
+	usecase "社交与消息\nfollowing-feed/social/messages" as UC_SOCIAL
+	usecase "举报与申诉\nreports/account-appeals" as UC_REPORT
+	usecase "公开访问\n/public/* + /uploads/*" as UC_PUBLIC
+	usecase "用户治理" as UC_ADMIN_USER
+	usecase "内容治理\n帖子/评论审核" as UC_ADMIN_MOD
+	usecase "工单治理\n申诉处理" as UC_ADMIN_CASE
+	usecase "运行概览\n/dashboard/overview" as UC_ADMIN_DASH
+}
+
+U -- UC_AUTH
+U -- UC_PET
+U -- UC_ARCHIVE
+U -- UC_COMM_READ
+U -- UC_COMM_WRITE
+U -- UC_SOCIAL
+U -- UC_REPORT
+U -- UC_PUBLIC
+
+G -- UC_AUTH
+G -- UC_COMM_READ
+G -- UC_PUBLIC
+
+A -- UC_AUTH
+A -- UC_COMM_READ
+A -- UC_COMM_WRITE
+A -- UC_SOCIAL
+A -- UC_ADMIN_USER
+A -- UC_ADMIN_MOD
+A -- UC_ADMIN_CASE
+A -- UC_ADMIN_DASH
+A -- UC_PUBLIC
+
+note right of G
+仅可读社区接口:
+feed/recommend/hot/topics/comments
+不可访问:
+following-feed 与社区写接口
+end note
+
+note right of A
+治理入口统一为:
+/api/admin/**
+举报治理接口:
+/api/reports/admin*
+end note
+
+@enduml

@@ -77,7 +77,7 @@
 - JWT_SECRET
 - JWT_EXPIRATION
 - DB_URL / DB_USERNAME / DB_PASSWORD（mysql profile）
-- APP_UPLOAD_DIR（上传目录）
+- UPLOAD_DIR（上传目录）
 
 已配置 multipart 上限为 1024MB。
 

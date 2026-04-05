@@ -6,6 +6,12 @@ export interface Pet {
   gender?: string
   birthDate?: string
   memorialDate?: string
+  age?: number
+  weight?: string
+  maritalStatus?: string
+  skills?: string
+  dietaryHabits?: string
+  physicalCondition?: string
   avatarUrl?: string
   description?: string
   isPublic: boolean
@@ -21,6 +27,11 @@ export interface PetPayload {
   gender?: string
   birthDate?: string
   memorialDate?: string
+  weight?: string
+  maritalStatus?: string
+  skills?: string
+  dietaryHabits?: string
+  physicalCondition?: string
   avatarUrl?: string
   description?: string
   isPublic?: boolean

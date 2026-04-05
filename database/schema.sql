@@ -26,6 +26,12 @@ CREATE TABLE IF NOT EXISTS pets (
   gender VARCHAR(20),
   birth_date DATE,
   memorial_date DATE,
+  age INT,
+  weight VARCHAR(20),
+  marital_status VARCHAR(20),
+  skills VARCHAR(500),
+  dietary_habits VARCHAR(1000),
+  physical_condition VARCHAR(1000),
   avatar_url VARCHAR(500),
   description VARCHAR(2000),
   owner_username VARCHAR(100) NOT NULL,
@@ -52,6 +58,26 @@ CREATE TABLE IF NOT EXISTS memory_entries (
   updated_at DATETIME NOT NULL,
   INDEX idx_memory_pet_event (pet_id, event_date DESC, id DESC),
   CONSTRAINT fk_memory_pet FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pet_archive_records (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  pet_id BIGINT NOT NULL,
+  archive_type VARCHAR(30) NOT NULL,
+  title VARCHAR(120) NOT NULL,
+  metric_value VARCHAR(100),
+  unit VARCHAR(20),
+  event_date DATE,
+  note VARCHAR(1000),
+  reminder_enabled BIT NOT NULL DEFAULT 0,
+  reminder_at DATETIME,
+  reminder_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  reminder_completed_at DATETIME,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_pet_archive_pet_event (pet_id, event_date DESC, id DESC),
+  INDEX idx_pet_archive_reminder (reminder_enabled, reminder_status, reminder_at),
+  CONSTRAINT fk_pet_archive_pet FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS community_topics (
