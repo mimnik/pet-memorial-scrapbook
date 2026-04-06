@@ -38,6 +38,11 @@ public class AdminController {
         return ApiResponse.success(adminService.listUsers(keyword));
     }
 
+    @PostMapping("/users")
+    public ApiResponse<AdminUserResponse> addUser(@Valid @RequestBody com.pet.memorial.dto.AdminAddUserRequest request) {
+        return ApiResponse.success("添加用户成功", adminService.addUser(request));
+    }
+
     @PutMapping("/users/{id}/status")
     public ApiResponse<AdminUserResponse> updateUserStatus(@PathVariable Long id,
                                                            @Valid @RequestBody AdminUserStatusUpdateRequest request) {

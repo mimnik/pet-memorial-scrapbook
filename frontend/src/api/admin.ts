@@ -26,6 +26,9 @@ export const listAdminAppeals = (status?: string) =>
 export const handleAdminAppeal = (id: number, payload: AccountAppealHandlePayload) =>
   request.put<unknown, { data: AccountAppeal }>(`/admin/account-appeals/${id}/handle`, payload)
 
+export const addUser = (payload: { username?: string, role: string }) =>
+  request.post<unknown, { data: AdminUser }>('/admin/users', payload)
+
 export const listAdminCommunityPosts = (keyword?: string) =>
   request.get<unknown, { data: AdminCommunityPost[] }>('/admin/community/posts', { params: { keyword } })
 

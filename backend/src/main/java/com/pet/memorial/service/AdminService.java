@@ -54,17 +54,19 @@ public class AdminService {
     private final MemoryEntryRepository memoryEntryRepository;
     private final CommunityTopicRepository communityTopicRepository;
     private final UserMessageRepository userMessageRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Value("${app.upload-dir}")
     private String uploadDir;
 
     public AdminService(UserRepository userRepository,
                         UserAccountAppealRepository appealRepository,
-                        CommunityPostRepository communityPostRepository,
-                        CommunityCommentRepository communityCommentRepository,
+                        CommunityPostRepository communityPostRepository,        
+                        CommunityCommentRepository communityCommentRepository,  
                         MemoryEntryRepository memoryEntryRepository,
-                        CommunityTopicRepository communityTopicRepository,
-                        UserMessageRepository userMessageRepository) {
+                        CommunityTopicRepository communityTopicRepository,      
+                        UserMessageRepository userMessageRepository,
+                        org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.appealRepository = appealRepository;
         this.communityPostRepository = communityPostRepository;
@@ -72,9 +74,10 @@ public class AdminService {
         this.memoryEntryRepository = memoryEntryRepository;
         this.communityTopicRepository = communityTopicRepository;
         this.userMessageRepository = userMessageRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    public List<AdminUserResponse> listUsers(String keyword) {
+    public java.util.List<AdminUserResponse> listUsers(String keyword) {
         ensureAdmin();
         String normalizedKeyword = normalizeKeyword(keyword);
         return userRepository.findAllByOrderByCreatedAtDesc().stream()
@@ -550,5 +553,54 @@ public class AdminService {
         response.setHiddenByAdmin(Boolean.TRUE.equals(comment.getHiddenByAdmin()));
         response.setCreatedAt(comment.getCreatedAt());
         return response;
+    }
+
+    public AdminUserResponse addUser(com.pet.memorial.dto.AdminAddUserRequest request) {
+        String username;
+        if ("ROLE_ADMIN".equals(request.getRole())) {
+            java.util.List<User> admins = userRepository.findByRole("ROLE_ADMIN");
+            int maxId = 0;
+            for (User admin : admins) {
+                try {
+                    int id = Integer.parseInt(admin.getUsername());
+                    if (id > maxId) {
+                        maxId = id;
+                    }
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            username = String.format("%04d", maxId + 1);
+        } else {
+            if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+                throw new IllegalArgumentException("普通用户必须填写用户名");
+            }
+            username = request.getUsername().trim();
+            if (userRepository.existsByUsername(username)) {
+                throw new IllegalArgumentException("用户名已被占用");
+            }
+        }
+        
+        String email = request.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            email = username + "@pet-memorial.local";
+        } else {
+            email = email.trim();
+            if (userRepository.existsByEmail(email)) {
+                throw new IllegalArgumentException("邮箱已被占用");
+            }
+        }
+
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setRole(request.getRole());
+        user.setPassword(passwordEncoder.encode("123456"));
+        user.setDisplayName(username);
+        user.setAccountFrozen(false);
+        user.setPostingRestricted(false);
+        user.setWarningCount(0);
+        
+        userRepository.save(user);
+        return toAdminUserResponse(user);
     }
 }

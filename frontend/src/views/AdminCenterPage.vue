@@ -8,6 +8,19 @@
       <div class="header-actions">
         <el-button type="primary" @click="refreshCurrentTab">刷新当前页</el-button>
         <el-button type="danger" plain @click="logout">退出登录</el-button>
+        <el-popover placement="bottom-end" trigger="click" :width="240">
+          <template #reference>
+            <button class="admin-avatar-trigger" type="button">
+              <img :src="adminAvatarUrl" alt="admin-avatar" class="admin-avatar" />
+              <span>{{ adminDisplayName }}</span>
+            </button>
+          </template>
+
+          <div class="admin-menu-actions">
+            <el-button type="primary" size="small" @click="openAdminProfileDialog">用户中心</el-button>
+            <el-button size="small" @click="openAdminPasswordDialog">修改密码</el-button>
+          </div>
+        </el-popover>
       </div>
     </header>
 
@@ -19,11 +32,19 @@
           <div class="toolbar">
             <el-input v-model="userKeyword" clearable placeholder="搜索用户名/昵称/邮箱" @keyup.enter="loadUsers" />
             <el-button type="primary" :loading="usersLoading" @click="loadUsers">搜索</el-button>
+            <el-button type="success" @click="openAddUserDialog">添加用户</el-button>
           </div>
 
           <el-table :data="users" v-loading="usersLoading" size="small" class="table">
             <el-table-column prop="id" label="ID" width="72" />
             <el-table-column prop="username" label="用户名" min-width="120" />
+            <el-table-column label="用户类型" width="120">
+              <template #default="scope">
+                <el-tag :type="scope.row.role === 'ROLE_ADMIN' ? 'warning' : 'info'">
+                  {{ formatRoleLabel(scope.row.role) }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="displayName" label="昵称" min-width="120" />
             <el-table-column prop="email" label="邮箱" min-width="200" />
             <el-table-column label="状态" min-width="170">
@@ -313,15 +334,98 @@
         </el-card>
       </el-tab-pane>
     </el-tabs>
+
+    <el-dialog v-model="adminProfileDialogVisible" title="用户中心" width="520px">
+      <el-form :model="adminProfileForm" label-width="96px" v-loading="adminProfileLoading">
+        <el-form-item label="用户名">
+          <el-input :model-value="adminProfile?.username || ''" disabled />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input :model-value="adminProfile?.email || ''" disabled />
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-input :model-value="formatRoleLabel(adminProfile?.role)" disabled />
+        </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="adminProfileForm.displayName" maxlength="100" placeholder="可用于首页展示" />
+        </el-form-item>
+        <el-form-item label="头像链接">
+          <div class="upload-row">
+            <el-input v-model="adminProfileForm.avatarUrl" placeholder="上传后自动填写或手动输入 https://..." />
+            <el-upload :show-file-list="false" :http-request="uploadAdminProfileAvatar" accept="image/*">
+              <el-button>上传图片</el-button>
+            </el-upload>
+          </div>
+        </el-form-item>
+        <el-form-item label="个人简介">
+          <el-input v-model="adminProfileForm.bio" type="textarea" :rows="3" maxlength="1000" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adminProfileDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="adminProfileSubmitting" @click="submitAdminProfile">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="adminPasswordDialogVisible" title="修改密码" width="420px">
+      <el-form
+        ref="adminPasswordFormRef"
+        :model="adminPasswordForm"
+        :rules="adminPasswordRules"
+        label-width="100px"
+      >
+        <el-form-item label="原密码" prop="oldPassword">
+          <el-input v-model="adminPasswordForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="adminPasswordForm.newPassword" type="password" show-password placeholder="不少于6位" />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input v-model="adminPasswordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adminPasswordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="adminPasswordSubmitting" @click="submitAdminPassword">修改密码</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="addUserDialogVisible" title="添加新用户" width="460px">
+      <el-form ref="addUserFormRef" :model="addUserForm" :rules="addUserRules" label-width="120px">
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="addUserForm.role" placeholder="选择账号角色">
+            <el-option label="普通用户" value="ROLE_USER" />
+            <el-option label="系统管理员" value="ROLE_ADMIN" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="addUserForm.username" placeholder="请输入用户名" :disabled="addUserForm.role === 'ROLE_ADMIN'" />
+          <div class="form-help" v-if="addUserForm.role === 'ROLE_ADMIN'">
+            管理员将由系统自动分配按序号递增的数字作为用户名
+          </div>
+        </el-form-item>
+        <p style="color: #666; font-size: 13px; margin-left: 20px;">
+          * 新手账户的初始默认密码统一为：<strong>123456</strong>
+        </p>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="addUserDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="addUserSubmitting" @click="submitAddUser">提交</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { UploadRequestOptions } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
+  addUser,
   getAdminDashboardOverview,
   handleAdminAppeal,
   listAdminAppeals,
@@ -333,7 +437,9 @@ import {
   updateAdminUserStatus,
   warnAdminUser,
 } from '@/api/admin'
+import { uploadImage } from '@/api/file'
 import { handleReport as handleContentReport, listAdminReports as listContentReports } from '@/api/report'
+import { changePassword, getMyProfile, updateMyProfile } from '@/api/user'
 import type {
   AccountAppeal,
   AccountAppealHandlePayload,
@@ -343,6 +449,7 @@ import type {
   AdminModerationPayload,
   AdminUser,
 } from '@/types/admin'
+import type { UserProfile } from '@/types/user'
 import type { ReportItem, ReportStatus } from '@/types/report'
 
 const userStore = useUserStore()
@@ -350,10 +457,97 @@ const router = useRouter()
 
 const activeTab = ref<'users' | 'moderation' | 'dashboard'>('users')
 const isAdmin = computed(() => userStore.profile?.role === 'ROLE_ADMIN')
+const defaultAvatarUrl = '/default-avatar.jpg'
+const adminDisplayName = computed(
+  () => adminProfile.value?.displayName || userStore.profile?.displayName || userStore.profile?.username || '管理员',
+)
+const adminAvatarUrl = computed(
+  () => adminProfile.value?.avatarUrl || userStore.profile?.avatarUrl || defaultAvatarUrl,
+)
 
 const userKeyword = ref('')
 const usersLoading = ref(false)
 const users = ref<AdminUser[]>([])
+
+const adminProfileDialogVisible = ref(false)
+const adminProfileLoading = ref(false)
+const adminProfileSubmitting = ref(false)
+const adminProfile = ref<UserProfile | null>(null)
+const adminProfileForm = ref({
+  displayName: '',
+  avatarUrl: '',
+  bio: '',
+})
+
+const adminPasswordDialogVisible = ref(false)
+const adminPasswordSubmitting = ref(false)
+const adminPasswordFormRef = ref()
+const adminPasswordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
+
+const adminPasswordRules = {
+  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+        if (value !== adminPasswordForm.value.newPassword) {
+          callback(new Error('两次输入密码不一致'))
+          return
+        }
+        callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+}
+
+const addUserDialogVisible = ref(false)
+const addUserSubmitting = ref(false)
+const addUserFormRef = ref()
+const addUserForm = ref({ role: 'ROLE_USER', username: '' })
+
+const addUserRules = {
+  role: [{ required: true, message: '请选择角色', trigger: 'change' }],
+  username: [{
+    validator: (rule: any, value: string, callback: any) => {
+      if (addUserForm.value.role === 'ROLE_USER' && !value.trim()) {
+        callback(new Error('普通用户必须填写用户名'))
+      } else {
+        callback()
+      }
+    },
+    trigger: 'blur'
+  }]
+}
+
+const openAddUserDialog = () => {
+  addUserForm.value = { role: 'ROLE_USER', username: '' }
+  addUserDialogVisible.value = true
+}
+
+const submitAddUser = async () => {
+  if (!addUserFormRef.value) return
+  await addUserFormRef.value.validate()
+  
+  try {
+    addUserSubmitting.value = true
+    const { data } = await addUser({
+      username: addUserForm.value.role === 'ROLE_USER' ? addUserForm.value.username : undefined,
+      role: addUserForm.value.role
+    })
+    ElMessage.success(`添加成功: ${data.username}`)
+    addUserDialogVisible.value = false
+    loadUsers()
+  } catch (error: any) {
+    ElMessage.error(error.message || '添加用户失败')
+  } finally {
+    addUserSubmitting.value = false
+  }
+}
 
 const appealStatus = ref('PENDING')
 const appealsLoading = ref(false)
@@ -373,6 +567,97 @@ const reports = ref<ReportItem[]>([])
 
 const dashboardLoading = ref(false)
 const dashboard = ref<AdminDashboardOverview | null>(null)
+
+const formatRoleLabel = (role?: string) => {
+  if (role === 'ROLE_ADMIN') {
+    return '管理员'
+  }
+  if (role === 'ROLE_USER') {
+    return '普通用户'
+  }
+  return role || '未知'
+}
+
+const loadAdminProfile = async () => {
+  adminProfileLoading.value = true
+  try {
+    const res = await getMyProfile()
+    adminProfile.value = res.data
+    adminProfileForm.value = {
+      displayName: res.data.displayName || '',
+      avatarUrl: res.data.avatarUrl || '',
+      bio: res.data.bio || '',
+    }
+    if (userStore.profile) {
+      userStore.profile.displayName = res.data.displayName
+      userStore.profile.avatarUrl = res.data.avatarUrl
+    }
+  } finally {
+    adminProfileLoading.value = false
+  }
+}
+
+const openAdminProfileDialog = async () => {
+  if (!adminProfile.value) {
+    await loadAdminProfile()
+  }
+  adminProfileDialogVisible.value = true
+}
+
+const uploadAdminProfileAvatar = async (options: UploadRequestOptions) => {
+  const file = options.file as File
+  const res = await uploadImage(file)
+  adminProfileForm.value.avatarUrl = res.data.url
+  ElMessage.success('头像上传成功')
+}
+
+const submitAdminProfile = async () => {
+  adminProfileSubmitting.value = true
+  try {
+    const res = await updateMyProfile({
+      displayName: adminProfileForm.value.displayName.trim() || undefined,
+      avatarUrl: adminProfileForm.value.avatarUrl.trim() || undefined,
+      bio: adminProfileForm.value.bio.trim() || undefined,
+    })
+    adminProfile.value = res.data
+    if (userStore.profile) {
+      userStore.profile.displayName = res.data.displayName
+      userStore.profile.avatarUrl = res.data.avatarUrl
+    }
+    ElMessage.success('用户中心资料已更新')
+    adminProfileDialogVisible.value = false
+  } finally {
+    adminProfileSubmitting.value = false
+  }
+}
+
+const openAdminPasswordDialog = () => {
+  adminPasswordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+  adminPasswordDialogVisible.value = true
+}
+
+const submitAdminPassword = async () => {
+  if (!adminPasswordFormRef.value) {
+    return
+  }
+  await adminPasswordFormRef.value.validate()
+  adminPasswordSubmitting.value = true
+  try {
+    await changePassword({
+      oldPassword: adminPasswordForm.value.oldPassword,
+      newPassword: adminPasswordForm.value.newPassword,
+    })
+    ElMessage.success('密码修改成功，请重新登录')
+    adminPasswordDialogVisible.value = false
+    userStore.logout()
+    await router.replace('/login')
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '修改密码失败'
+    ElMessage.error(message)
+  } finally {
+    adminPasswordSubmitting.value = false
+  }
+}
 
 const logout = async () => {
   try {
@@ -770,6 +1055,38 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-avatar-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 4px;
+  border: 1px solid #d7deed;
+  background: #fff;
+  border-radius: 999px;
+  cursor: pointer;
+  color: #334258;
+}
+
+.admin-avatar-trigger:hover {
+  border-color: #9fb4d9;
+}
+
+.admin-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #dbe4f3;
+  background: #f4f8ff;
+}
+
+.admin-menu-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .admin-tabs :deep(.el-tabs__content) {

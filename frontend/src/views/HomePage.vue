@@ -6,10 +6,6 @@
           <p class="hero-eyebrow">PET MEMORIAL SCRAPBOOK</p>
           <h1>宠物数字纪念册</h1>
           <p>记录每一段与宠物同行的回忆，沉淀成为可长期保存的数字纪念页。</p>
-          <p class="login-user">
-            当前登录：<strong>@{{ userStore.profile?.username || '未登录' }}</strong>
-            <span v-if="userDisplayName"> · {{ userDisplayName }}</span>
-          </p>
         </div>
         <div class="hero-actions">
           <el-button v-if="!isAdmin" type="primary" plain @click="goCommunity">进入宠物社区</el-button>
@@ -18,7 +14,7 @@
           <el-button v-if="!isAdmin" @click="copyShareLink">分享主页</el-button>
           <el-button type="danger" plain @click="logout">退出登录</el-button>
 
-          <el-popover v-if="!isAdmin" placement="bottom-end" trigger="hover" :width="320">
+          <el-popover placement="bottom-end" trigger="hover" :width="320">
             <template #reference>
               <button class="avatar-trigger" type="button">
                 <img :src="currentAvatarUrl" alt="user-avatar" class="user-avatar" />
@@ -35,15 +31,15 @@
                 </div>
               </div>
 
-              <p v-if="profile?.bio" class="user-center-bio">{{ profile?.bio }}</p>
-              <div class="user-center-stats">
+              <p v-if="profile?.bio && !isAdmin" class="user-center-bio">{{ profile?.bio }}</p>
+              <div v-if="!isAdmin" class="user-center-stats">
                 <span>关注 {{ profile?.followingCount || 0 }}</span>
                 <span>粉丝 {{ profile?.followerCount || 0 }}</span>
               </div>
 
               <div class="user-center-actions">
                 <el-button type="primary" size="small" @click="openProfileDialog">用户中心</el-button>
-                <el-button size="small" @click="openFollowingDialog">关注动态</el-button>
+                <el-button size="small" @click="openChangePasswordDialog">修改密码</el-button>
               </div>
             </div>
           </el-popover>
@@ -328,6 +324,26 @@
         <el-button type="primary" :loading="submitting" @click="submitMemory">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="changePasswordDialogVisible" title="修改密码" width="400px">
+      <el-form ref="changePasswordFormRef" :model="changePasswordForm" :rules="changePasswordRules" label-width="100px">
+        <el-form-item label="原密码" prop="oldPassword">
+          <el-input v-model="changePasswordForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="changePasswordForm.newPassword" type="password" show-password placeholder="新密码 (不少于6位)" />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input v-model="changePasswordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="changePasswordDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="changePasswordSubmitting" @click="submitChangePassword">修改密码</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -338,7 +354,7 @@ import type { UploadRequestOptions } from 'element-plus'
 import { createPet, deletePet, listPets, updatePet } from '@/api/pet'
 import { createMemory, deleteMemory, listMemoriesByPet, updateMemory } from '@/api/memory'
 import { listFollowingCommunityFeed } from '@/api/community'
-import { getMyProfile, updateMyProfile } from '@/api/user'
+import { getMyProfile, updateMyProfile, changePassword } from '@/api/user'
 import { uploadImage, uploadMedia } from '@/api/file'
 import type { CommunityPost } from '@/types/community'
 import type { Pet, PetPayload } from '@/types/pet'
@@ -360,6 +376,57 @@ const defaultAvatarUrl = '/default-avatar.jpg'
 const petDialogVisible = ref(false)
 const memoryDialogVisible = ref(false)
 const profileDialogVisible = ref(false)
+
+const changePasswordDialogVisible = ref(false)
+const changePasswordSubmitting = ref(false)
+const changePasswordFormRef = ref()
+const changePasswordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
+
+const changePasswordRules = {
+  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (_rule: any, value: string, callback: any) => {
+        if (value !== changePasswordForm.value.newPassword) {
+          callback(new Error('两次输入密码不一致!'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+const openChangePasswordDialog = () => {
+  changePasswordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+  changePasswordDialogVisible.value = true
+}
+
+const submitChangePassword = async () => {
+  if (!changePasswordFormRef.value) return
+  await changePasswordFormRef.value.validate()
+  
+  try {
+    changePasswordSubmitting.value = true
+    await changePassword({ 
+      oldPassword: changePasswordForm.value.oldPassword,
+      newPassword: changePasswordForm.value.newPassword 
+    })
+    ElMessage.success('密码修改成功，请重新登录')
+    changePasswordDialogVisible.value = false
+    logout()
+  } catch (error: any) {
+    ElMessage.error(error.message || '修改密码失败')
+  } finally {
+    changePasswordSubmitting.value = false
+  }
+}
 const followingDialogVisible = ref(false)
 const editingPetId = ref<number | null>(null)
 const editingMemoryId = ref<number | null>(null)

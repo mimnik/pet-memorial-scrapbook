@@ -30,4 +30,10 @@ public class UserProfileController {
     public ApiResponse<UserProfileResponse> updateMyProfile(@Valid @RequestBody UserProfileUpdateRequest request) {
         return ApiResponse.success("个人资料更新成功", userProfileService.updateMyProfile(request));
     }
+
+    @PutMapping("/password")
+    public ApiResponse<Void> changePassword(@Valid @RequestBody com.pet.memorial.dto.PasswordChangeRequest request) {
+        userProfileService.changePassword(request);
+        return ApiResponse.success("密码修改成功", null);
+    }
 }

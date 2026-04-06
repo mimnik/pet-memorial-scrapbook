@@ -27,12 +27,55 @@ function Stop-ProcessOnPort {
     }
 }
 
+function Ensure-NodeToolchain {
+    param([string]$RepoRoot)
+
+    $nodeReady = $false
+    try {
+        if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+            $null = & node -v
+            $null = & npm -v
+            $nodeReady = $true
+        }
+    }
+    catch {
+        $nodeReady = $false
+    }
+
+    if ($nodeReady) {
+        return
+    }
+
+    $portableNodeDir = $null
+    $preferredPortableDir = Join-Path $RepoRoot '.tools\node'
+    if (Test-Path (Join-Path $preferredPortableDir 'node.exe')) {
+        $portableNodeDir = $preferredPortableDir
+    }
+
+    if (-not $portableNodeDir) {
+        $toolsDir = Join-Path $RepoRoot '.tools'
+        if (Test-Path $toolsDir) {
+            $candidate = Get-ChildItem -Path $toolsDir -Directory -Filter 'node-v*-win-x64' |
+                Where-Object { Test-Path (Join-Path $_.FullName 'node.exe') } |
+                Sort-Object Name -Descending |
+                Select-Object -First 1
+            if ($candidate) {
+                $portableNodeDir = $candidate.FullName
+            }
+        }
+    }
+
+    if ($portableNodeDir) {
+        $env:Path = "$portableNodeDir;$env:Path"
+        Write-Host "Using portable Node.js from $portableNodeDir"
+    }
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDir '..')
-$workspaceRoot = Resolve-Path (Join-Path $repoRoot '..')
 $backendDir = Join-Path $repoRoot 'backend'
 $frontendDir = Join-Path $repoRoot 'frontend'
-$frpDir = Join-Path $workspaceRoot 'frp'
+$frpDir = Join-Path $repoRoot 'frp'
 $frpcExe = Join-Path $frpDir 'frpc.exe'
 $frpcConfig = Join-Path $frpDir 'frpc.toml'
 
@@ -41,11 +84,21 @@ if ($CleanPorts) {
     Stop-ProcessOnPort -Port 3000
 }
 
+Ensure-NodeToolchain -RepoRoot $repoRoot
+
 if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
     throw 'java command not found. Please install JDK 21 first.'
 }
 
-if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+if ((Get-Command npm -ErrorAction SilentlyContinue) -ne $null) {
+    try {
+        $nodeVersion = (& node -v).Trim()
+        $npmVersion = (& npm -v).Trim()
+        Write-Host "Detected Node.js $nodeVersion, npm $npmVersion"
+    } catch {
+        throw 'npm command exists but node/npm failed to run. Please install Node.js.'
+    }
+} else {
     throw 'npm command not found. Please install Node.js first.'
 }
 
@@ -74,8 +127,8 @@ if ($UseMySQL) {
 $backendCmd = "Set-Location '$backendDir'; java $backendArgs"
 $frontendCmd = "Set-Location '$frontendDir'; npm run dev"
 
-$backendProc = Start-Process -FilePath 'powershell' -ArgumentList '-NoExit', '-Command', $backendCmd -PassThru
-$frontendProc = Start-Process -FilePath 'powershell' -ArgumentList '-NoExit', '-Command', $frontendCmd -PassThru
+$backendProc = Start-Process -FilePath 'powershell' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-NoExit', '-Command', $backendCmd -PassThru
+$frontendProc = Start-Process -FilePath 'powershell' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-NoExit', '-Command', $frontendCmd -PassThru
 
 $frpcProc = $null
 if (-not $SkipFrp) {
@@ -91,7 +144,7 @@ if (-not $SkipFrp) {
 
     if ((Test-Path $frpcExe) -and (Test-Path $frpcConfig)) {
         $frpcCmd = "Set-Location '$frpDir'; .\\frpc.exe -c .\\frpc.toml"
-        $frpcProc = Start-Process -FilePath 'powershell' -ArgumentList '-NoExit', '-Command', $frpcCmd -PassThru
+        $frpcProc = Start-Process -FilePath 'powershell' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-NoExit', '-Command', $frpcCmd -PassThru
     }
     else {
         Write-Warning "frpc not started because file is missing: $frpcExe or $frpcConfig"

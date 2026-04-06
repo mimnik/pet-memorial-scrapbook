@@ -8,16 +8,28 @@ import com.pet.memorial.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 public class UserProfileService {
 
     private final UserRepository userRepository;
     private final UserFollowRepository userFollowRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserProfileService(UserRepository userRepository, UserFollowRepository userFollowRepository) {
+    public UserProfileService(UserRepository userRepository, UserFollowRepository userFollowRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userFollowRepository = userFollowRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public void changePassword(com.pet.memorial.dto.PasswordChangeRequest request) {
+        User user = getCurrentUser();
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("旧密码不正确");
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     public UserProfileResponse getMyProfile() {
