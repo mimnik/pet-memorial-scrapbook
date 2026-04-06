@@ -17,11 +17,6 @@ spring:
         format_sql: true
         dialect: ${JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
 
-  h2:
-    console:
-      enabled: false
-      path: /h2-console
-  
   servlet:
     multipart:
       max-file-size: 1024MB

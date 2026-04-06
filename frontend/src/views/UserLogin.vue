@@ -67,11 +67,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { createFrozenAccountAppeal } from '@/api/appeal'
+import { popAuthExpiredHint } from '@/utils/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -91,6 +92,22 @@ const appealForm = ref({
   username: '',
   appealType: 'ACCOUNT_FROZEN',
   details: '',
+})
+
+onMounted(() => {
+  const queryHint = typeof route.query.authHint === 'string' ? route.query.authHint.trim() : ''
+  const expiredHint = queryHint || popAuthExpiredHint()
+  if (!expiredHint) {
+    return
+  }
+
+  authHint.value = expiredHint
+
+  if (queryHint) {
+    const nextQuery = { ...route.query }
+    delete nextQuery.authHint
+    void router.replace({ path: route.path, query: nextQuery })
+  }
 })
 
 const toggleMode = () => {

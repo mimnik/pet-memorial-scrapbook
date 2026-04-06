@@ -411,12 +411,12 @@ const openChangePasswordDialog = () => {
 const submitChangePassword = async () => {
   if (!changePasswordFormRef.value) return
   await changePasswordFormRef.value.validate()
-  
+
   try {
     changePasswordSubmitting.value = true
-    await changePassword({ 
+    await changePassword({
       oldPassword: changePasswordForm.value.oldPassword,
-      newPassword: changePasswordForm.value.newPassword 
+      newPassword: changePasswordForm.value.newPassword
     })
     ElMessage.success('密码修改成功，请重新登录')
     changePasswordDialogVisible.value = false

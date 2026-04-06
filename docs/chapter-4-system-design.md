@@ -205,20 +205,199 @@
 
 ### 4.3.2 核心数据实体
 
-| 实体表               | 说明           | 关键字段                                                                 |
-| -------------------- | -------------- | ------------------------------------------------------------------------ |
-| users                | 用户主表       | username, email, role, account_frozen, posting_restricted                |
-| pets                 | 宠物主档案     | owner_username, birth_date, age, weight, marital_status, skills, dietary_habits, physical_condition, memorial_date, share_token, is_public |
-| memory_entries       | 回忆记录       | pet_id, title, content, event_date, image_url, video_url                 |
-| pet_archive_records  | 宠物档案与提醒 | archive_type, title, event_date, reminder_enabled, reminder_at, reminder_status, reminder_completed_at |
-| community_topics     | 社区话题       | name, description                                                        |
-| community_posts      | 社区帖子       | pet_id, topic_id, mood_tag, narrative_mode, pet_voice, relay_enabled, like_count, comment_count, image_url, video_url |
-| community_comments   | 社区评论       | post_id, author_username, relay_reply                                    |
-| community_post_likes | 点赞关系       | post_id + username（唯一）                                               |
-| user_follows         | 关注关系       | follower_username + following_username（唯一）                           |
-| user_messages        | 私信消息       | sender_username, receiver_username, read_by_receiver                     |
-| content_reports      | 举报工单       | target_type, target_id, status, handled_by_username                      |
-| user_account_appeals | 账号申诉       | username, appeal_type, status, handled_by_username                       |
+以下按“字段名、类型、长度、是否为空、键、注释”格式给出核心实体表字段定义。
+
+#### 1) users（用户主表）
+
+| 字段名             | 类型     | 长度 | 是否为空 | 键       | 注释                                    |
+| ------------------ | -------- | ---- | -------- | -------- | --------------------------------------- |
+| id                 | BIGINT   | -    | 否       | PK, 自增 | 用户主键ID                              |
+| username           | VARCHAR  | 100  | 否       | UK       | 用户名（唯一）                          |
+| email              | VARCHAR  | 120  | 否       | UK       | 邮箱（唯一）                            |
+| password           | VARCHAR  | 120  | 否       | -        | 密码哈希                                |
+| display_name       | VARCHAR  | 100  | 是       | -        | 显示昵称                                |
+| avatar_url         | VARCHAR  | 500  | 是       | -        | 头像URL                                 |
+| bio                | VARCHAR  | 1000 | 是       | -        | 个人简介                                |
+| role               | VARCHAR  | 20   | 否       | -        | 角色（ROLE_USER/ROLE_ADMIN/ROLE_GUEST） |
+| account_frozen     | BIT      | -    | 否       | -        | 是否冻结账号（默认0）                   |
+| posting_restricted | BIT      | -    | 否       | -        | 是否限制发布（默认0）                   |
+| warning_count      | INT      | -    | 否       | -        | 警告次数（默认0）                       |
+| admin_note         | VARCHAR  | 1000 | 是       | -        | 管理员备注                              |
+| created_at         | DATETIME | -    | 否       | -        | 创建时间                                |
+| updated_at         | DATETIME | -    | 否       | -        | 更新时间                                |
+
+#### 2) pets（宠物主档案）
+
+| 字段名             | 类型     | 长度 | 是否为空 | 键       | 注释                            |
+| ------------------ | -------- | ---- | -------- | -------- | ------------------------------- |
+| id                 | BIGINT   | -    | 否       | PK, 自增 | 宠物主键ID                      |
+| name               | VARCHAR  | 100  | 否       | -        | 宠物名称                        |
+| species            | VARCHAR  | 100  | 是       | -        | 物种                            |
+| breed              | VARCHAR  | 100  | 是       | -        | 品种                            |
+| gender             | VARCHAR  | 20   | 是       | -        | 性别                            |
+| birth_date         | DATE     | -    | 是       | -        | 生日                            |
+| memorial_date      | DATE     | -    | 是       | -        | 纪念日                          |
+| age                | INT      | -    | 是       | -        | 年龄（可由生日自动计算）        |
+| weight             | VARCHAR  | 20   | 是       | -        | 体重描述                        |
+| marital_status     | VARCHAR  | 20   | 是       | -        | 婚姻状态                        |
+| skills             | VARCHAR  | 500  | 是       | -        | 特长                            |
+| dietary_habits     | VARCHAR  | 1000 | 是       | -        | 饮食习惯                        |
+| physical_condition | VARCHAR  | 1000 | 是       | -        | 身体状况                        |
+| avatar_url         | VARCHAR  | 500  | 是       | -        | 宠物头像URL                     |
+| description        | VARCHAR  | 2000 | 是       | -        | 宠物简介                        |
+| owner_username     | VARCHAR  | 100  | 否       | FK, IDX  | 所属用户（关联 users.username） |
+| is_public          | BIT      | -    | 否       | -        | 是否公开（默认0）               |
+| share_token        | VARCHAR  | 64   | 否       | UK       | 分享令牌（唯一）                |
+| created_at         | DATETIME | -    | 否       | -        | 创建时间                        |
+| updated_at         | DATETIME | -    | 否       | -        | 更新时间                        |
+
+#### 3) memory_entries（回忆记录）
+
+| 字段名                 | 类型     | 长度 | 是否为空 | 键            | 注释                       |
+| ---------------------- | -------- | ---- | -------- | ------------- | -------------------------- |
+| id                     | BIGINT   | -    | 否       | PK, 自增      | 回忆主键ID                 |
+| pet_id                 | BIGINT   | -    | 否       | FK, IDX(复合) | 所属宠物ID（关联 pets.id） |
+| title                  | VARCHAR  | 200  | 否       | -             | 回忆标题                   |
+| content                | VARCHAR  | 5000 | 否       | -             | 回忆正文                   |
+| event_date             | DATE     | -    | 是       | IDX(复合)     | 事件日期                   |
+| location               | VARCHAR  | 200  | 是       | -             | 地点                       |
+| image_url              | VARCHAR  | 500  | 是       | -             | 图片URL                    |
+| video_url              | VARCHAR  | 500  | 是       | -             | 视频URL                    |
+| video_cover_url        | VARCHAR  | 500  | 是       | -             | 视频封面URL                |
+| video_duration_seconds | INT      | -    | 是       | -             | 视频时长（秒）             |
+| created_at             | DATETIME | -    | 否       | -             | 创建时间                   |
+| updated_at             | DATETIME | -    | 否       | -             | 更新时间                   |
+
+#### 4) pet_archive_records（宠物档案与提醒）
+
+| 字段名                | 类型     | 长度 | 是否为空 | 键            | 注释                       |
+| --------------------- | -------- | ---- | -------- | ------------- | -------------------------- |
+| id                    | BIGINT   | -    | 否       | PK, 自增      | 档案记录主键ID             |
+| pet_id                | BIGINT   | -    | 否       | FK, IDX(复合) | 所属宠物ID（关联 pets.id） |
+| archive_type          | VARCHAR  | 30   | 否       | -             | 档案类型                   |
+| title                 | VARCHAR  | 120  | 否       | -             | 记录标题                   |
+| metric_value          | VARCHAR  | 100  | 是       | -             | 指标值                     |
+| unit                  | VARCHAR  | 20   | 是       | -             | 单位                       |
+| event_date            | DATE     | -    | 是       | IDX(复合)     | 记录日期                   |
+| note                  | VARCHAR  | 1000 | 是       | -             | 备注                       |
+| reminder_enabled      | BIT      | -    | 否       | IDX(复合)     | 是否启用提醒（默认0）      |
+| reminder_at           | DATETIME | -    | 是       | IDX(复合)     | 提醒时间                   |
+| reminder_status       | VARCHAR  | 20   | 否       | IDX(复合)     | 提醒状态（默认PENDING）    |
+| reminder_completed_at | DATETIME | -    | 是       | -             | 提醒完成时间               |
+| created_at            | DATETIME | -    | 否       | -             | 创建时间                   |
+| updated_at            | DATETIME | -    | 否       | -             | 更新时间                   |
+
+#### 5) community_topics（社区话题）
+
+| 字段名              | 类型     | 长度 | 是否为空 | 键       | 注释             |
+| ------------------- | -------- | ---- | -------- | -------- | ---------------- |
+| id                  | BIGINT   | -    | 否       | PK, 自增 | 话题主键ID       |
+| name                | VARCHAR  | 50   | 否       | UK       | 话题名称（唯一） |
+| description         | VARCHAR  | 500  | 是       | -        | 话题描述         |
+| created_by_username | VARCHAR  | 100  | 否       | -        | 创建人用户名     |
+| created_at          | DATETIME | -    | 否       | -        | 创建时间         |
+| updated_at          | DATETIME | -    | 否       | -        | 更新时间         |
+
+#### 6) community_posts（社区帖子）
+
+| 字段名                 | 类型     | 长度 | 是否为空 | 键            | 注释                                   |
+| ---------------------- | -------- | ---- | -------- | ------------- | -------------------------------------- |
+| id                     | BIGINT   | -    | 否       | PK, 自增      | 帖子主键ID                             |
+| pet_id                 | BIGINT   | -    | 否       | FK            | 关联宠物ID（关联 pets.id）             |
+| topic_id               | BIGINT   | -    | 是       | FK, IDX(复合) | 关联话题ID（关联 community_topics.id） |
+| author_username        | VARCHAR  | 100  | 否       | IDX(复合)     | 作者用户名                             |
+| title                  | VARCHAR  | 200  | 否       | -             | 帖子标题                               |
+| content                | VARCHAR  | 5000 | 否       | -             | 帖子正文                               |
+| image_url              | VARCHAR  | 500  | 是       | -             | 图片URL                                |
+| video_url              | VARCHAR  | 500  | 是       | -             | 视频URL                                |
+| video_cover_url        | VARCHAR  | 500  | 是       | -             | 视频封面URL                            |
+| video_duration_seconds | INT      | -    | 是       | -             | 视频时长（秒）                         |
+| mood_tag               | VARCHAR  | 20   | 否       | -             | 情绪标签（默认SUNNY）                  |
+| narrative_mode         | VARCHAR  | 20   | 否       | -             | 叙事模式（默认DAILY）                  |
+| pet_voice              | BIT      | -    | 否       | -             | 是否宠物口吻（默认0）                  |
+| relay_enabled          | BIT      | -    | 否       | -             | 是否接力（默认0）                      |
+| like_count             | INT      | -    | 否       | -             | 点赞数（默认0）                        |
+| comment_count          | INT      | -    | 否       | -             | 评论数（默认0）                        |
+| hidden_by_admin        | BIT      | -    | 否       | -             | 是否被管理员屏蔽（默认0）              |
+| created_at             | DATETIME | -    | 否       | IDX(复合)     | 创建时间（信息流排序）                 |
+| updated_at             | DATETIME | -    | 否       | -             | 更新时间                               |
+
+#### 7) community_comments（社区评论）
+
+| 字段名          | 类型     | 长度 | 是否为空 | 键            | 注释                                  |
+| --------------- | -------- | ---- | -------- | ------------- | ------------------------------------- |
+| id              | BIGINT   | -    | 否       | PK, 自增      | 评论主键ID                            |
+| post_id         | BIGINT   | -    | 否       | FK, IDX(复合) | 所属帖子ID（关联 community_posts.id） |
+| author_username | VARCHAR  | 100  | 否       | -             | 评论作者用户名                        |
+| content         | VARCHAR  | 1000 | 否       | -             | 评论内容                              |
+| relay_reply     | BIT      | -    | 否       | -             | 是否接力回复（默认0）                 |
+| hidden_by_admin | BIT      | -    | 否       | -             | 是否被管理员屏蔽（默认0）             |
+| created_at      | DATETIME | -    | 否       | IDX(复合)     | 创建时间                              |
+| updated_at      | DATETIME | -    | 否       | -             | 更新时间                              |
+
+#### 8) community_post_likes（点赞关系）
+
+| 字段名     | 类型     | 长度 | 是否为空 | 键                | 注释                              |
+| ---------- | -------- | ---- | -------- | ----------------- | --------------------------------- |
+| id         | BIGINT   | -    | 否       | PK, 自增          | 点赞主键ID                        |
+| post_id    | BIGINT   | -    | 否       | FK, UK(联合), IDX | 帖子ID（关联 community_posts.id） |
+| username   | VARCHAR  | 100  | 否       | UK(联合)          | 点赞用户名                        |
+| created_at | DATETIME | -    | 否       | -                 | 创建时间                          |
+| updated_at | DATETIME | -    | 否       | -                 | 更新时间                          |
+
+#### 9) user_follows（关注关系）
+
+| 字段名             | 类型     | 长度 | 是否为空 | 键                | 注释                                  |
+| ------------------ | -------- | ---- | -------- | ----------------- | ------------------------------------- |
+| id                 | BIGINT   | -    | 否       | PK, 自增          | 关注关系主键ID                        |
+| follower_username  | VARCHAR  | 100  | 否       | FK, UK(联合), IDX | 关注者用户名（关联 users.username）   |
+| following_username | VARCHAR  | 100  | 否       | FK, UK(联合), IDX | 被关注者用户名（关联 users.username） |
+| created_at         | DATETIME | -    | 否       | -                 | 创建时间                              |
+| updated_at         | DATETIME | -    | 否       | -                 | 更新时间                              |
+
+#### 10) user_messages（私信消息）
+
+| 字段名            | 类型     | 长度 | 是否为空 | 键            | 注释                                |
+| ----------------- | -------- | ---- | -------- | ------------- | ----------------------------------- |
+| id                | BIGINT   | -    | 否       | PK, 自增      | 私信主键ID                          |
+| sender_username   | VARCHAR  | 100  | 否       | FK, IDX(复合) | 发送者用户名（关联 users.username） |
+| receiver_username | VARCHAR  | 100  | 否       | FK, IDX(复合) | 接收者用户名（关联 users.username） |
+| content           | VARCHAR  | 2000 | 否       | -             | 私信内容                            |
+| read_by_receiver  | BIT      | -    | 否       | IDX(复合)     | 接收方是否已读（默认0）             |
+| created_at        | DATETIME | -    | 否       | IDX(复合)     | 创建时间                            |
+| updated_at        | DATETIME | -    | 否       | -             | 更新时间                            |
+
+#### 11) content_reports（举报工单）
+
+| 字段名              | 类型     | 长度 | 是否为空 | 键       | 注释                                |
+| ------------------- | -------- | ---- | -------- | -------- | ----------------------------------- |
+| id                  | BIGINT   | -    | 否       | PK, 自增 | 举报单主键ID                        |
+| reporter_username   | VARCHAR  | 100  | 否       | FK, IDX  | 举报人用户名（关联 users.username） |
+| target_type         | VARCHAR  | 20   | 否       | -        | 举报目标类型                        |
+| target_id           | BIGINT   | -    | 否       | -        | 举报目标ID                          |
+| reason              | VARCHAR  | 120  | 否       | -        | 举报原因                            |
+| details             | VARCHAR  | 2000 | 是       | -        | 举报详情                            |
+| status              | VARCHAR  | 20   | 否       | IDX      | 工单状态（默认PENDING）             |
+| handled_by_username | VARCHAR  | 100  | 是       | FK       | 处理人用户名（关联 users.username） |
+| handled_at          | DATETIME | -    | 是       | -        | 处理时间                            |
+| handle_note         | VARCHAR  | 1000 | 是       | -        | 处理备注                            |
+| created_at          | DATETIME | -    | 否       | -        | 创建时间                            |
+| updated_at          | DATETIME | -    | 否       | -        | 更新时间                            |
+
+#### 12) user_account_appeals（账号申诉）
+
+| 字段名              | 类型     | 长度 | 是否为空 | 键       | 注释                                |
+| ------------------- | -------- | ---- | -------- | -------- | ----------------------------------- |
+| id                  | BIGINT   | -    | 否       | PK, 自增 | 账号申诉主键ID                      |
+| username            | VARCHAR  | 100  | 否       | FK, IDX  | 申诉用户名（关联 users.username）   |
+| appeal_type         | VARCHAR  | 40   | 否       | -        | 申诉类型                            |
+| details             | VARCHAR  | 2000 | 否       | -        | 申诉详情                            |
+| status              | VARCHAR  | 20   | 否       | IDX      | 申诉状态（默认PENDING）             |
+| handled_by_username | VARCHAR  | 100  | 是       | FK       | 处理人用户名（关联 users.username） |
+| handled_at          | DATETIME | -    | 是       | -        | 处理时间                            |
+| handle_note         | VARCHAR  | 1000 | 是       | -        | 处理备注                            |
+| created_at          | DATETIME | -    | 否       | -        | 创建时间                            |
+| updated_at          | DATETIME | -    | 否       | -        | 更新时间                            |
 
 ### 4.3.3 主要关系设计
 
@@ -367,51 +546,51 @@
 
 #### 4) 社区与社交
 
-| 方法   | 路径                                   | 说明          |
-| ------ | -------------------------------------- | ------------- |
-| GET    | /api/community/feed                    | 社区信息流（游客可读） |
-| GET    | /api/community/following-feed          | 关注信息流（仅用户/管理员） |
-| GET    | /api/community/recommendations         | 推荐内容（游客可读） |
-| GET    | /api/community/hot-pets                | 宠物热榜（游客可读） |
-| GET    | /api/community/mine                    | 我的帖子（仅用户/管理员） |
-| POST   | /api/community/posts                   | 发布帖子（仅用户/管理员） |
-| GET    | /api/community/topics                  | 话题列表（游客可读） |
-| POST   | /api/community/topics                  | 创建话题（仅用户/管理员） |
+| 方法   | 路径                                   | 说明                           |
+| ------ | -------------------------------------- | ------------------------------ |
+| GET    | /api/community/feed                    | 社区信息流（游客可读）         |
+| GET    | /api/community/following-feed          | 关注信息流（仅用户/管理员）    |
+| GET    | /api/community/recommendations         | 推荐内容（游客可读）           |
+| GET    | /api/community/hot-pets                | 宠物热榜（游客可读）           |
+| GET    | /api/community/mine                    | 我的帖子（仅用户/管理员）      |
+| POST   | /api/community/posts                   | 发布帖子（仅用户/管理员）      |
+| GET    | /api/community/topics                  | 话题列表（游客可读）           |
+| POST   | /api/community/topics                  | 创建话题（仅用户/管理员）      |
 | POST   | /api/community/posts/{postId}/like     | 点赞/取消点赞（仅用户/管理员） |
-| GET    | /api/community/posts/{postId}/comments | 评论列表（游客可读） |
-| POST   | /api/community/posts/{postId}/comments | 新增评论（仅用户/管理员） |
-| POST   | /api/social/follow/{username}          | 关注用户      |
-| DELETE | /api/social/follow/{username}          | 取消关注      |
-| GET    | /api/social/following                  | 我的关注      |
-| GET    | /api/social/followers                  | 我的粉丝      |
-| GET    | /api/social/summary                    | 关注汇总      |
+| GET    | /api/community/posts/{postId}/comments | 评论列表（游客可读）           |
+| POST   | /api/community/posts/{postId}/comments | 新增评论（仅用户/管理员）      |
+| POST   | /api/social/follow/{username}          | 关注用户                       |
+| DELETE | /api/social/follow/{username}          | 取消关注                       |
+| GET    | /api/social/following                  | 我的关注                       |
+| GET    | /api/social/followers                  | 我的粉丝                       |
+| GET    | /api/social/summary                    | 关注汇总                       |
 
 #### 5) 私信、举报、申诉、管理
 
-| 方法         | 路径                               | 说明                 |
-| ------------ | ---------------------------------- | -------------------- |
-| GET          | /api/messages/conversations        | 会话列表             |
-| GET          | /api/messages/with/{username}      | 与指定用户会话       |
-| POST         | /api/messages/with/{username}      | 发送私信             |
-| PUT          | /api/messages/with/{username}/read | 标记会话已读         |
-| GET          | /api/messages/summary              | 私信汇总             |
-| POST         | /api/reports                       | 创建举报             |
-| GET          | /api/reports/mine                  | 我的举报             |
-| GET          | /api/reports/admin                 | 管理员查询举报       |
-| PUT          | /api/reports/admin/{id}/handle     | 管理员处理举报       |
-| POST         | /api/account-appeals               | 用户提交申诉         |
-| POST         | /api/account-appeals/public        | 冻结用户公共申诉入口 |
-| GET          | /api/account-appeals/mine          | 我的申诉             |
-| GET          | /api/admin/users                   | 管理员查询用户       |
-| PUT          | /api/admin/users/{id}/status       | 管理员更新用户状态（冻结/限制发布等） |
-| POST         | /api/admin/users/{id}/warn         | 管理员警告用户       |
-| GET          | /api/admin/account-appeals         | 管理员查询申诉       |
-| PUT          | /api/admin/account-appeals/{id}/handle | 管理员处理申诉  |
-| GET          | /api/admin/community/posts         | 管理员查询帖子       |
-| GET          | /api/admin/community/comments      | 管理员查询评论       |
-| PUT          | /api/admin/community/posts/{id}/moderate | 管理员审核帖子  |
-| PUT          | /api/admin/community/comments/{id}/moderate | 管理员审核评论 |
-| GET          | /api/admin/dashboard/overview      | 管理概览             |
+| 方法 | 路径                                        | 说明                                  |
+| ---- | ------------------------------------------- | ------------------------------------- |
+| GET  | /api/messages/conversations                 | 会话列表                              |
+| GET  | /api/messages/with/{username}               | 与指定用户会话                        |
+| POST | /api/messages/with/{username}               | 发送私信                              |
+| PUT  | /api/messages/with/{username}/read          | 标记会话已读                          |
+| GET  | /api/messages/summary                       | 私信汇总                              |
+| POST | /api/reports                                | 创建举报                              |
+| GET  | /api/reports/mine                           | 我的举报                              |
+| GET  | /api/reports/admin                          | 管理员查询举报                        |
+| PUT  | /api/reports/admin/{id}/handle              | 管理员处理举报                        |
+| POST | /api/account-appeals                        | 用户提交申诉                          |
+| POST | /api/account-appeals/public                 | 冻结用户公共申诉入口                  |
+| GET  | /api/account-appeals/mine                   | 我的申诉                              |
+| GET  | /api/admin/users                            | 管理员查询用户                        |
+| PUT  | /api/admin/users/{id}/status                | 管理员更新用户状态（冻结/限制发布等） |
+| POST | /api/admin/users/{id}/warn                  | 管理员警告用户                        |
+| GET  | /api/admin/account-appeals                  | 管理员查询申诉                        |
+| PUT  | /api/admin/account-appeals/{id}/handle      | 管理员处理申诉                        |
+| GET  | /api/admin/community/posts                  | 管理员查询帖子                        |
+| GET  | /api/admin/community/comments               | 管理员查询评论                        |
+| PUT  | /api/admin/community/posts/{id}/moderate    | 管理员审核帖子                        |
+| PUT  | /api/admin/community/comments/{id}/moderate | 管理员审核评论                        |
+| GET  | /api/admin/dashboard/overview               | 管理概览                              |
 
 #### 6) 公开访问与文件上传
 

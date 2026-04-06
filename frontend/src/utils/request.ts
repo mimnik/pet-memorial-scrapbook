@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { clearAuth, getToken } from '@/utils/auth'
+import { clearAuth, getToken, setAuthExpiredHint } from '@/utils/auth'
 
 const UPLOADS_PATH_PREFIX = '/uploads/'
 
@@ -58,6 +58,39 @@ const request = axios.create({
   timeout: 10000,
 })
 
+const hasAuthorizationHeader = (error: unknown) => {
+  const maybeConfig = (error as { config?: { headers?: unknown } } | null)?.config
+  const headers = maybeConfig?.headers as
+    | {
+        Authorization?: unknown
+        authorization?: unknown
+        get?: (name: string) => unknown
+      }
+    | undefined
+
+  if (!headers) {
+    return false
+  }
+
+  if (typeof headers.get === 'function') {
+    const headerValue = headers.get('Authorization')
+    if (typeof headerValue === 'string' && headerValue.trim()) {
+      return true
+    }
+  }
+
+  const directValue = headers.Authorization ?? headers.authorization
+  if (typeof directValue === 'string') {
+    return directValue.trim().length > 0
+  }
+
+  if (Array.isArray(directValue)) {
+    return directValue.some((item) => typeof item === 'string' && item.trim().length > 0)
+  }
+
+  return false
+}
+
 request.interceptors.response.use(
   (response) => {
     const res = response.data
@@ -79,7 +112,9 @@ request.interceptors.response.use(
 request.interceptors.request.use((config) => {
   const token = getToken()
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    // 过滤掉非 ASCII 字符（如中文），防止浏览器设置请求头报错
+    const safeToken = token.replace(/[^\x20-\x7E]/g, '')
+    config.headers.Authorization = `Bearer ${safeToken}`
   }
   return config
 })
@@ -89,8 +124,27 @@ request.interceptors.response.use(
   (error) => {
     const status = error?.response?.status
     if (status === 401) {
+      const hasLocalToken = getToken().trim().length > 0
+      const isAuthenticatedRequest = hasAuthorizationHeader(error) || hasLocalToken
+      const expiredMessage =
+        typeof error?.response?.data?.message === 'string' && error.response.data.message.trim()
+          ? error.response.data.message.trim()
+          : '登录状态已失效，请重新登录'
+
+      if (isAuthenticatedRequest) {
+        setAuthExpiredHint(expiredMessage)
+      }
       clearAuth()
-      window.location.href = '/login'
+      if (!window.location.pathname.startsWith('/login')) {
+        if (isAuthenticatedRequest) {
+          const encodedHint = encodeURIComponent(expiredMessage)
+          setTimeout(() => {
+            window.location.href = `/login?authHint=${encodedHint}`
+          }, 1500)
+        } else {
+          window.location.href = '/login'
+        }
+      }
     }
     return Promise.reject(error)
   },

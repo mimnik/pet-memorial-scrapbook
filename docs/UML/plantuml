@@ -1,0 +1,151 @@
+//用于描述用户登录流程，包括账号登录和游客登录两种方式
+@startuml
+' 参与者定义
+actor 用户
+participant 前端页面
+participant AuthController
+participant UserService
+participant Database
+
+' 主流程：账号登录
+用户 -> 前端页面: 1.选择账号登录并提交凭证
+activate 用户
+activate 前端页面
+
+前端页面 -> AuthController: 2.POST /api/auth/login
+activate AuthController
+
+AuthController -> UserService: 3.调用loadUserByUsername(username)
+activate UserService
+
+UserService -> Database: 4.查询登录用户信息
+activate Database
+Database --> UserService: 5.返回用户实体/空
+deactivate Database
+
+alt 用户不存在
+    UserService --> AuthController: 6a.返回账号不存在
+    deactivate UserService
+    AuthController --> 前端页面: 7a.返回错误提示
+    deactivate AuthController
+    前端页面 --> 用户: 8a.显示"账号不存在"
+    deactivate 前端页面
+    deactivate 用户
+else 用户存在
+    UserService --> AuthController: 6b.返回用户信息
+    deactivate UserService
+    alt 密码错误
+        AuthController --> 前端页面: 7b.返回"密码错误"
+        deactivate AuthController
+        前端页面 --> 用户: 8b.显示错误提示
+        deactivate 前端页面
+        deactivate 用户
+    else 密码正确
+        alt 账号已冻结
+            AuthController --> 前端页面: 7c.返回"账号已冻结"
+            deactivate AuthController
+            前端页面 --> 用户: 8c.显示错误提示
+            deactivate 前端页面
+            deactivate 用户
+        else 账号正常
+            AuthController -> AuthController: 9.签发JWT令牌\n(含userId, role, exp=24h)
+            AuthController --> 前端页面: 10.返回Token+用户信息
+            deactivate AuthController
+            前端页面 -> 前端页面: 11.将Token存入localStorage
+            前端页面 --> 用户: 12.根据用户角色跳转相应系统首页
+            deactivate 前端页面
+            deactivate 用户
+        end
+    end
+end
+
+' 游客登录流程
+用户 -> 前端页面: 13.选择游客登录
+activate 用户
+activate 前端页面
+
+前端页面 -> AuthController: 14.POST /api/auth/guest
+activate AuthController
+
+AuthController -> AuthController: 15.生成临时身份标识\nUUID.randomUUID()
+AuthController -> AuthController: 16.构建游客用户对象\nuserId: 临时UUID\nrole: ROLE_GUEST
+AuthController -> AuthController: 17.签发JWT令牌\n(含guestId, role, exp=24h)
+
+AuthController --> 前端页面: 18.返回Token+游客信息
+deactivate AuthController
+
+前端页面 -> 前端页面: 19.将Token存入localStorage
+前端页面 --> 用户: 20.跳转社区页面
+deactivate 前端页面
+deactivate 用户
+@enduml
+
+
+
+//用于描述用户注册流程，包括前端校验、后端验证和数据库操作等步骤
+@startuml
+title 用户注册时序图
+
+actor 用户
+participant 前端页面
+participant AuthController
+participant UserService
+database Database
+
+用户 -> 前端页面: 1.填写注册信息\n(用户名、密码、邮箱)
+activate 前端页面
+
+前端页面 -> 前端页面: 2.前端格式校验\n(用户名长度、密码强度、邮箱格式)
+
+前端页面 -> AuthController: 3.POST /api/auth/register\n(用户名、密码、邮箱)
+activate AuthController
+
+AuthController -> UserService: 4.校验用户名和邮箱是否唯一
+activate UserService
+
+UserService -> Database: 5.查询用户名是否存在
+activate Database
+Database --> UserService: 6a.返回查询结果
+deactivate Database
+
+UserService -> Database: 7.查询邮箱是否存在
+activate Database
+Database --> UserService: 8b.返回查询结果
+deactivate Database
+
+alt 用户名已存在
+    UserService --> AuthController: 9a.返回"用户名已存在"
+    deactivate UserService
+    AuthController --> 前端页面: 10a.返回错误提示
+    deactivate AuthController
+    前端页面 --> 用户: 11a.显示"用户名已存在"
+    deactivate 前端页面
+else 邮箱已存在
+    UserService --> AuthController: 9b.返回"邮箱已存在"
+    deactivate UserService
+    AuthController --> 前端页面: 10b.返回错误提示
+    deactivate AuthController
+    前端页面 --> 用户: 11b.显示"邮箱已存在"
+    deactivate 前端页面
+else 用户名和邮箱均唯一
+    UserService -> UserService: 12.BCrypt加密密码
+    UserService -> UserService: 13.构建用户实体\n(role=ROLE_USER, status=正常)
+    
+    UserService -> Database: 14.插入用户记录
+    activate Database
+    Database --> UserService: 15.返回用户ID
+    deactivate Database
+    
+    UserService --> AuthController: 16.返回注册成功
+    deactivate UserService
+    
+    AuthController -> AuthController: 17.签发JWT令牌
+    AuthController --> 前端页面: 18.返回Token+用户信息
+    deactivate AuthController
+    
+    前端页面 -> 前端页面: 19.将Token存入localStorage
+    前端页面 --> 用户: 20.跳转系统首页
+    deactivate 前端页面
+end
+
+@enduml

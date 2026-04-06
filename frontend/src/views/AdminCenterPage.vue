@@ -532,7 +532,7 @@ const openAddUserDialog = () => {
 const submitAddUser = async () => {
   if (!addUserFormRef.value) return
   await addUserFormRef.value.validate()
-  
+
   try {
     addUserSubmitting.value = true
     const { data } = await addUser({
